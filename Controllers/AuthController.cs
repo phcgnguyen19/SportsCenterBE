@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using SportsCenterAPI.DTOs.Auth;
-using SportsCenterAPI.Services;
+using SportsCenterAPI.Services.Implement;
 
 namespace SportsCenterAPI.Controllers;
 
@@ -27,6 +27,8 @@ public class AuthController : ControllerBase
     [HttpPost("login")]
     [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         var response = await _authService.LoginAsync(request);
@@ -39,11 +41,13 @@ public class AuthController : ControllerBase
     /// <param name="request">Thông tin đăng ký (email, password, tên, ...)</param>
     /// <returns>Thông tin user + JWT token</returns>
     [HttpPost("register")]
-    [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request)
     {
         var response = await _authService.RegisterAsync(request);
-        return Ok(response);
+        return CreatedAtAction(nameof(Register), response);
     }
 }

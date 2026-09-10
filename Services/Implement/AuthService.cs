@@ -3,14 +3,15 @@ using SportsCenterAPI.Data;
 using SportsCenterAPI.DTOs.Auth;
 using SportsCenterAPI.Helpers;
 using SportsCenterAPI.Models;
+using SportsCenterAPI.Services.Interface;
 
-namespace SportsCenterAPI.Services;
+namespace SportsCenterAPI.Services.Implement;
 
 /// <summary>
 /// Service xử lý logic xác thực: đăng nhập, đăng ký
 /// Authentication service: handles login and registration logic
 /// </summary>
-public class AuthService
+public class AuthService : IAuthService
 {
     private readonly AppDbContext _context;
     private readonly IConfiguration _configuration;

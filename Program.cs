@@ -4,8 +4,9 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Scalar.AspNetCore;
 using SportsCenterAPI.Data;
-using SportsCenterAPI.Services;
 using SportsCenterAPI.Middleware;
+using SportsCenterAPI.Services.Implement;
+using SportsCenterAPI.Services.Interface;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -51,7 +52,7 @@ builder.Services.AddCors(options =>
 });
 
 // Register Services (DI)
-builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 var app = builder.Build();
 
