@@ -52,6 +52,7 @@ builder.Services.AddCors(options =>
 });
 
 // Register Services (DI)
+
 builder.Services.AddScoped<IAuthService, AuthService>();
 
 var app = builder.Build();
