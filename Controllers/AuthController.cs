@@ -1,6 +1,10 @@
+using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
-using SportsCenterAPI.DTOs.Auth;
+using SportsCenterAPI.DTOs;
+using SportsCenterAPI.DTOs.Request;
+using SportsCenterAPI.DTOs.Response;
 using SportsCenterAPI.Services.Implement;
+using SportsCenterAPI.Services.Interface;
 
 namespace SportsCenterAPI.Controllers;
 
@@ -12,9 +16,10 @@ namespace SportsCenterAPI.Controllers;
 [Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
-    private readonly AuthService _authService;
+    private readonly IAuthService _authService;
+    private readonly IMapper _mapper;
 
-    public AuthController(AuthService authService)
+    public AuthController(IAuthService authService)
     {
         _authService = authService;
     }
@@ -25,14 +30,31 @@ public class AuthController : ControllerBase
     /// <param name="request">Email và mật khẩu</param>
     /// <returns>Thông tin user + JWT token</returns>
     [HttpPost("login")]
-    [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> Login([FromBody] LoginRequest request)
+    [ProducesResponseType(typeof(ApiResponse<LoginResponseDTO>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<ApiResponse<LoginResponseDTO>>> Login([FromBody] LoginRequestDTO loginRequestDTO)
     {
-        var response = await _authService.LoginAsync(request);
+        if (loginRequestDTO == null)
+        {
+            return BadRequest(ApiResponse<object>.BadRequest("Invalid login request", new { Error = "Request body is null" }));
+        }
+
+        var loginResponse = await _authService.LoginAsync(loginRequestDTO);
+
+        if (loginResponse == null)
+        {
+            return BadRequest(ApiResponse<object>.BadRequest("Login failed"));
+        }
+
+        //auth service will return a response with user info and JWT token
+        var response = ApiResponse<AuthResponse>.Ok(loginResponse, "Login successful");
         return Ok(response);
+
+        var errorResponse = ApiResponse<object>.Error(StatusCodes.Status500InternalServerError, "An error occurred during login");
+
+        return StatusCode(500, errorResponse);
     }
 
     /// <summary>
@@ -41,13 +63,32 @@ public class AuthController : ControllerBase
     /// <param name="request">Thông tin đăng ký (email, password, tên, ...)</param>
     /// <returns>Thông tin user + JWT token</returns>
     [HttpPost("register")]
-    [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> Register([FromBody] RegisterRequest request)
+    [ProducesResponseType(typeof(ApiResponse<UserDTO>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Register([FromBody] RegisterRequestDTO request)
     {
-        var response = await _authService.RegisterAsync(request);
+        if(request == null)
+        {
+            return BadRequest(ApiResponse<object>.BadRequest("Registration data is required"));
+        }
+        
+        if(await _authService.IsEmailExistingAsync(request.Email))
+        {
+            return Conflict(ApiResponse<object>.Conflict($"User with email {request.Email} already exists"));
+        }
+
+        var user = await _authService.RegisterAsync(request);
+
+        if (user == null)
+        {
+            return BadRequest(ApiResponse<object>.BadRequest("Registration failed"));
+        }
+
+
+
+        var response = ApiResponse<AuthResponse>.Ok(user, "Registration successful");
         return CreatedAtAction(nameof(Register), response);
     }
 }

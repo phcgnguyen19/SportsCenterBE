@@ -1,4 +1,4 @@
-namespace SportsCenterAPI.DTOs.Auth;
+namespace SportsCenterAPI.DTOs.Response;
 
 /// <summary>
 /// Response DTO for API responses / DTO trả về cho các phản hồi của API
@@ -47,5 +47,5 @@ public class ApiResponse<TData>
     public static ApiResponse<TData> Error(int statusCode, string message, object? errors = null) =>
         Create(false, statusCode, message, errors: errors);
 
-
+    
 }

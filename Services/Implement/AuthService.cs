@@ -1,6 +1,9 @@
+using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.VisualBasic;
 using SportsCenterAPI.Data;
-using SportsCenterAPI.DTOs.Auth;
+using SportsCenterAPI.DTOs.Request;
+using SportsCenterAPI.DTOs.Response;
 using SportsCenterAPI.Helpers;
 using SportsCenterAPI.Models;
 using SportsCenterAPI.Services.Interface;
@@ -20,17 +23,18 @@ public class AuthService : IAuthService
     {
         _context = context;
         _configuration = configuration;
+       
     }
 
     /// <summary>
     /// Đăng nhập — kiểm tra email + password, trả về JWT token
     /// Login — verify email + password, return JWT token
     /// </summary>
-    public async Task<AuthResponse> LoginAsync(LoginRequest request)
+    public async Task<AuthResponse> LoginAsync(LoginRequestDTO request)
     {
         // Tìm user theo email / Find user by email
         var user = await _context.Users
-            .FirstOrDefaultAsync(u => u.Email == request.Email && u.IsActive);
+            .FirstOrDefaultAsync(u => u.Email.ToLower() == request.Email.ToLower() && u.IsActive);
 
         if (user == null)
             throw new UnauthorizedAccessException("Invalid email or password.");
@@ -56,11 +60,11 @@ public class AuthService : IAuthService
     /// Đăng ký thành viên mới — tạo User + Member, trả về JWT token
     /// Register new member — create User + Member records, return JWT token
     /// </summary>
-    public async Task<AuthResponse> RegisterAsync(RegisterRequest request)
+    public async Task<AuthResponse> RegisterAsync(RegisterRequestDTO request)
     {
         // Kiểm tra email đã tồn tại chưa / Check if email already exists
         var existingUser = await _context.Users
-            .AnyAsync(u => u.Email == request.Email);
+            .AnyAsync(u => u.Email.ToLower() == request.Email.ToLower());
 
         if (existingUser)
             throw new InvalidOperationException("Email is already registered.");
@@ -75,7 +79,7 @@ public class AuthService : IAuthService
             Role = "Member",
             IsActive = true,
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            UpdatedAt = null
         };
 
         _context.Users.Add(user);
@@ -118,5 +122,11 @@ public class AuthService : IAuthService
             jwtSettings["Audience"]!,
             int.Parse(jwtSettings["ExpireMinutes"] ?? "60")
         );
+    }
+
+
+    public async Task<bool> IsEmailExistingAsync(string email)
+    {
+        return await _context.Users.AnyAsync(u => u.Email.ToLower() == email.ToLower());
     }
 }

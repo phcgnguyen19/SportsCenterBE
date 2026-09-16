@@ -1,11 +1,11 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace SportsCenterAPI.DTOs.Auth;
+namespace SportsCenterAPI.DTOs.Request;
 
 /// <summary>
 /// Request DTO for new member registration / DTO yêu cầu đăng ký thành viên mới
 /// </summary>
-public class RegisterRequest
+public class RegisterRequestDTO
 {
     [Required(ErrorMessage = "Email is required")]
     [EmailAddress(ErrorMessage = "Invalid email format")]

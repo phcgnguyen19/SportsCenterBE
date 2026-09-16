@@ -7,6 +7,7 @@ using SportsCenterAPI.Data;
 using SportsCenterAPI.Middleware;
 using SportsCenterAPI.Services.Implement;
 using SportsCenterAPI.Services.Interface;
+using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,7 +17,34 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 
 // OpenAPI/Scalar
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options =>
+{
+    options.AddDocumentTransformer((document, context, cancellationToken) =>
+    {
+        document.Components ??= new();
+        document.Components.SecuritySchemes ??=
+            new Dictionary<string, IOpenApiSecurityScheme>();
+
+        document.Components.SecuritySchemes["Bearer"] =
+            new OpenApiSecurityScheme
+            {
+                Type = SecuritySchemeType.Http,
+                Scheme = "bearer",
+                BearerFormat = "JWT",
+                Description = "Enter JWT Bearer Token."
+            };
+
+        document.Security =
+        [
+            new OpenApiSecurityRequirement
+            {
+                [new OpenApiSecuritySchemeReference("Bearer", document)] = []
+            }
+        ];
+
+        return Task.CompletedTask;
+    });
+});
 
 // Entity Framework Core + SQL Server
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -52,6 +80,7 @@ builder.Services.AddCors(options =>
 });
 
 // Register Services (DI)
+
 builder.Services.AddScoped<IAuthService, AuthService>();
 
 var app = builder.Build();
