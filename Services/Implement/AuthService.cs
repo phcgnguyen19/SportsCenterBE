@@ -79,7 +79,7 @@ public class AuthService : IAuthService
             Role = "Member",
             IsActive = true,
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            UpdatedAt = null
         };
 
         _context.Users.Add(user);
