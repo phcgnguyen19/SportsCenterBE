@@ -1,5 +1,6 @@
-﻿using SportsCenterAPI.DTOs.Request;
-using SportsCenterAPI.DTOs.Response;
+﻿using SportsCenterAPI.Models.DTOs.Auth;
+using SportsCenterAPI.Models.DTOs.Login;
+using SportsCenterAPI.Models.DTOs.Register;
 
 namespace SportsCenterAPI.Services.Interface
 {

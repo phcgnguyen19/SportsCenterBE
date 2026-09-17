@@ -2,10 +2,11 @@ using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.VisualBasic;
 using SportsCenterAPI.Data;
-using SportsCenterAPI.DTOs.Request;
-using SportsCenterAPI.DTOs.Response;
 using SportsCenterAPI.Helpers;
 using SportsCenterAPI.Models;
+using SportsCenterAPI.Models.DTOs.Auth;
+using SportsCenterAPI.Models.DTOs.Login;
+using SportsCenterAPI.Models.DTOs.Register;
 using SportsCenterAPI.Services.Interface;
 
 namespace SportsCenterAPI.Services.Implement;

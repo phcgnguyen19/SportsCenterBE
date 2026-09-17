@@ -1,4 +1,4 @@
-namespace SportsCenterAPI.DTOs.Response;
+namespace SportsCenterAPI.Models.DTOs.API;
 
 /// <summary>
 /// Response DTO for API responses / DTO trả về cho các phản hồi của API

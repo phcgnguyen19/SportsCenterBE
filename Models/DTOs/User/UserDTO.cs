@@ -1,4 +1,4 @@
-﻿namespace SportsCenterAPI.DTOs
+﻿namespace SportsCenterAPI.Models.DTOs.User
 {
     public class UserDTO
     {

@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace SportsCenterAPI.DTOs.Request;
+namespace SportsCenterAPI.Models.DTOs.Register;
 
 /// <summary>
 /// Request DTO for new member registration / DTO yêu cầu đăng ký thành viên mới
