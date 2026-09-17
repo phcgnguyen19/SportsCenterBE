@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace SportsCenterAPI.DTOs.Request;
+namespace SportsCenterAPI.Models.DTOs.Login;
 
 /// <summary>
 /// Request DTO for user login / DTO yêu cầu đăng nhập

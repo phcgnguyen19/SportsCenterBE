@@ -1,4 +1,6 @@
-﻿namespace SportsCenterAPI.DTOs.Response
+﻿using SportsCenterAPI.Models.DTOs.User;
+
+namespace SportsCenterAPI.Models.DTOs.Login
 {
     public class LoginResponseDTO
     {

@@ -1,8 +1,10 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
-using SportsCenterAPI.DTOs;
-using SportsCenterAPI.DTOs.Request;
-using SportsCenterAPI.DTOs.Response;
+using SportsCenterAPI.Models.DTOs.API;
+using SportsCenterAPI.Models.DTOs.Auth;
+using SportsCenterAPI.Models.DTOs.Login;
+using SportsCenterAPI.Models.DTOs.Register;
+using SportsCenterAPI.Models.DTOs.User;
 using SportsCenterAPI.Services.Implement;
 using SportsCenterAPI.Services.Interface;
 
@@ -13,7 +15,7 @@ namespace SportsCenterAPI.Controllers;
 /// Authentication controller: login and registration endpoints
 /// </summary>
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/auth")]
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;

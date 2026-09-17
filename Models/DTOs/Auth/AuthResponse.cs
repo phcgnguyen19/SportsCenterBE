@@ -1,7 +1,7 @@
 ﻿using SportsCenterAPI.Models;
 using System.Data;
 
-namespace SportsCenterAPI.DTOs.Response
+namespace SportsCenterAPI.Models.DTOs.Auth
 {
     public class AuthResponse
     {
