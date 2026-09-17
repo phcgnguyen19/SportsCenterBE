@@ -8,7 +8,6 @@ using SportsCenterAPI.Middleware;
 using SportsCenterAPI.Services.Implement;
 using SportsCenterAPI.Services.Interface;
 using Microsoft.OpenApi;
-using SportsCenterAPI.Models.DTOs.Class;
 using SportsCenterAPI.Models;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -84,22 +83,7 @@ builder.Services.AddCors(options =>
 // Register Services (DI)
 
 builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<ISportClassService, SportClassService>();
 
-// Cấu hình AutoMapper
-builder.Services.AddAutoMapper(o =>
-{
-    o.CreateMap<SportClass, SportClassResponse>()
-        .ForMember(
-            dest => dest.SportName,
-            opt => opt.MapFrom(src => src.Sport.Name))
-        .ForMember(
-            dest => dest.RegisteredCount,
-            opt => opt.Ignore())
-        .ForMember(
-            dest => dest.AvailableSlots,
-            opt => opt.Ignore());
-});
 var app = builder.Build();
 
 // === Configure Middleware Pipeline ===

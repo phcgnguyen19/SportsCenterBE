@@ -4,6 +4,7 @@ using SportsCenterAPI.Models.DTOs.API;
 using SportsCenterAPI.Models.DTOs.Auth;
 using SportsCenterAPI.Models.DTOs.Login;
 using SportsCenterAPI.Models.DTOs.Register;
+using SportsCenterAPI.Models.DTOs.Response;
 using SportsCenterAPI.Models.DTOs.User;
 using SportsCenterAPI.Services.Implement;
 using SportsCenterAPI.Services.Interface;
