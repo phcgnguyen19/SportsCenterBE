@@ -9,6 +9,7 @@ using SportsCenterAPI.Services.Implement;
 using SportsCenterAPI.Services.Interface;
 using Microsoft.OpenApi;
 using SportsCenterAPI.Models;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -66,6 +67,26 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidAudience = jwtSettings["Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]!))
         };
+        // Role changes and soft deletion invalidate previously issued tokens immediately.
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                if (!int.TryParse(context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
+                {
+                    context.Fail("Invalid account identifier.");
+                    return;
+                }
+
+                var db = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
+                var account = await db.Users.AsNoTracking()
+                    .Where(user => user.Id == userId)
+                    .Select(user => new { user.IsActive, user.Role })
+                    .SingleOrDefaultAsync(context.HttpContext.RequestAborted);
+                if (account is null || !account.IsActive || account.Role != context.Principal?.FindFirstValue(ClaimTypes.Role))
+                    context.Fail("Account is inactive or permissions have changed. Please sign in again.");
+            }
+        };
     });
 builder.Services.AddAuthorization();
 
@@ -83,6 +104,9 @@ builder.Services.AddCors(options =>
 // Register Services (DI)
 
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IAccountService, AccountService>();
+builder.Services.AddScoped<IMembershipPackageService, MembershipPackageService>();
+builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 
 var app = builder.Build();
 
@@ -104,11 +128,15 @@ app.UseAuthorization();
 app.MapControllers();
 
 // Auto-migrate database on startup (development only)
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.Migrate();
-}
+//using (var scope = app.Services.CreateScope())
+//{
+//    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+//    db.Database.Migrate();
+//}
+
 
 app.Run();
+
+// Allows the integration-test host to run the actual API pipeline.
+public partial class Program { }
 

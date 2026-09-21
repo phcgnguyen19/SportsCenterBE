@@ -2,6 +2,9 @@ using System.Net;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
+using SportsCenterAPI.Helpers;
 
 namespace SportsCenterAPI.Middleware
 {
@@ -58,6 +61,9 @@ namespace SportsCenterAPI.Middleware
             // Phân loại mã trạng thái HTTP dựa trên kiểu ngoại lệ
             var statusCode = exception switch
             {
+                BusinessException business => business.StatusCode,
+                DbUpdateConcurrencyException => StatusCodes.Status409Conflict,
+                DbUpdateException { InnerException: SqlException { Number: 2601 or 2627 } } => StatusCodes.Status409Conflict,
                 KeyNotFoundException => (int)HttpStatusCode.NotFound, // 404
                 UnauthorizedAccessException => (int)HttpStatusCode.Unauthorized, // 401
                 ArgumentNullException or ArgumentException or InvalidOperationException => (int)HttpStatusCode.BadRequest, // 400
@@ -71,7 +77,9 @@ namespace SportsCenterAPI.Middleware
             var errorResponse = new ErrorResponse
             {
                 StatusCode = statusCode,
-                Message = statusCode == (int)HttpStatusCode.InternalServerError
+                Message = exception is DbUpdateException && statusCode == StatusCodes.Status409Conflict
+                    ? "The record already exists or was changed by another request. Reload and try again."
+                    : statusCode == (int)HttpStatusCode.InternalServerError
                     ? "An unexpected internal server error occurred. Please try again later."
                     : exception.Message
             };

@@ -126,6 +126,19 @@ namespace SportsCenterAPI.Data
             modelBuilder.Entity<ClassRegistration>()
                 .HasIndex(cr => new { cr.MemberId, cr.ClassId })
                 .IsUnique();
+
+            modelBuilder.Entity<MemberSubscription>()
+                .HasIndex(subscription => new { subscription.MemberId, subscription.PackageId, subscription.Status });
+            modelBuilder.Entity<MemberSubscription>()
+                .Property(subscription => subscription.Status).HasMaxLength(20);
+            modelBuilder.Entity<Payment>()
+                .HasIndex(payment => payment.SubscriptionId).IsUnique()
+                .HasFilter("[SubscriptionId] IS NOT NULL AND [Status] = N'Completed'");
+            modelBuilder.Entity<Payment>()
+                .Property(payment => payment.TransactionReference).HasMaxLength(100);
+            modelBuilder.Entity<Payment>()
+                .HasIndex(payment => payment.TransactionReference).IsUnique()
+                .HasFilter("[TransactionReference] IS NOT NULL");
             #endregion
 
             #region 2. Decimal Precision Configurations / Cấu hình độ chính xác số tiền
@@ -139,6 +152,9 @@ namespace SportsCenterAPI.Data
             modelBuilder.Entity<MembershipPackage>()
                 .Property(mp => mp.Price)
                 .HasPrecision(18, 2);
+
+            modelBuilder.Entity<MemberSubscription>()
+                .Property(subscription => subscription.AgreedPrice).HasPrecision(18, 2);
 
             // SportClass Price precision (18, 2)
             modelBuilder.Entity<SportClass>()
