@@ -63,6 +63,17 @@ public class ApiWithoutDatabaseTests(NoDatabaseFactory factory) : IClassFixture<
     [InlineData("POST", "/api/member-subscriptions/1/cancel")]
     [InlineData("POST", "/api/members")]
     [InlineData("GET", "/api/users/staff")]
+    [InlineData("POST", "/api/classes")]
+    [InlineData("POST", "/api/classes/1/sessions")]
+    [InlineData("POST", "/api/class-sessions/1/registrations")]
+    [InlineData("POST", "/api/class-sessions/1/registrations/members/1")]
+    [InlineData("POST", "/api/class-registrations/1/cancel")]
+    [InlineData("POST", "/api/class-registrations/1/check-in")]
+    [InlineData("POST", "/api/class-registrations/1/review")]
+    [InlineData("POST", "/api/class-sessions/1/complete")]
+    [InlineData("GET", "/api/class-sessions/1/roster")]
+    [InlineData("GET", "/api/cancellation-policies")]
+    [InlineData("GET", "/api/notifications")]
     public async Task ProtectedRoutesRejectMissingTokenBeforeAccessingDatabase(string method, string route)
     {
         using var client = Client();

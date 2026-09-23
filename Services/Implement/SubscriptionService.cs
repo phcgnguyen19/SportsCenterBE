@@ -110,6 +110,8 @@ public class SubscriptionService(AppDbContext context) : ISubscriptionService
                 throw new BusinessException(409, "The member account is inactive.");
             if (subscription.Status != "Pending")
                 throw new BusinessException(409, "Only a Pending subscription can be paid and activated.");
+            if (await context.Payments.AnyAsync(p => p.SubscriptionId == subscriptionId && p.Status == "NeedsReview", cancellationToken))
+                throw new BusinessException(409, "An earlier payment needs reconciliation before recording another payment.");
             if (await context.Payments.AnyAsync(p => p.SubscriptionId == subscriptionId && p.Status == "Completed", cancellationToken))
                 throw new BusinessException(409, "This subscription has already been paid.");
             if (subscription.AgreedPrice <= 0 || request.Amount != subscription.AgreedPrice)
@@ -173,6 +175,8 @@ public class SubscriptionService(AppDbContext context) : ISubscriptionService
                 ?? throw new BusinessException(404, "Subscription was not found.");
             if (subscription.Status != "Pending" || subscription.Payments.Any(p => p.Status == "Completed"))
                 throw new BusinessException(409, "Only an unpaid Pending subscription can be cancelled.");
+            if (subscription.Payments.Any(p => p.Status == "NeedsReview"))
+                throw new BusinessException(409, "An earlier payment needs reconciliation before cancelling.");
             subscription.Status = "Cancelled";
             context.AuditLogs.Add(new AuditLog
             {

@@ -36,14 +36,19 @@ builder.Services.AddOpenApi(options =>
                 Description = "Enter JWT Bearer Token."
             };
 
-        document.Security =
-        [
-            new OpenApiSecurityRequirement
+        return Task.CompletedTask;
+    });
+    options.AddOperationTransformer((operation, context, cancellationToken) =>
+    {
+        var metadata = context.Description.ActionDescriptor.EndpointMetadata;
+        if (metadata.OfType<Microsoft.AspNetCore.Authorization.IAuthorizeData>().Any() &&
+            !metadata.OfType<Microsoft.AspNetCore.Authorization.IAllowAnonymous>().Any())
+        {
+            operation.Security = [new OpenApiSecurityRequirement
             {
-                [new OpenApiSecuritySchemeReference("Bearer", document)] = []
-            }
-        ];
-
+                [new OpenApiSecuritySchemeReference("Bearer", context.Document)] = []
+            }];
+        }
         return Task.CompletedTask;
     });
 });
@@ -107,6 +112,8 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<IMembershipPackageService, MembershipPackageService>();
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddScoped<IClassService, ClassService>();
 
 var app = builder.Build();
 
@@ -115,7 +122,7 @@ var app = builder.Build();
 // Global exception handler
 app.UseMiddleware<ExceptionMiddleware>();
 
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || builder.Configuration.GetValue<bool>("OpenApi:Enabled"))
 {
     app.MapOpenApi();
     app.MapScalarApiReference();

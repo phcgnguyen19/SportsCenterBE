@@ -13,5 +13,7 @@ namespace SportsCenterAPI.Models
         public SportClass Class { get; set; } = null!;
         public DateTime CheckInTime { get; set; } = DateTime.UtcNow;
         public string Status { get; set; } = "Present"; // Present, Absent, Excused
+        public int? SessionId { get; set; }
+        public ClassSession? Session { get; set; }
     }
 }

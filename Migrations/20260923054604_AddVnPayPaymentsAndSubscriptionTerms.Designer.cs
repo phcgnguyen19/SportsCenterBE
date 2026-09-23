@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SportsCenterAPI.Data;
 
@@ -11,9 +12,11 @@ using SportsCenterAPI.Data;
 namespace SportsCenterAPI.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260923054604_AddVnPayPaymentsAndSubscriptionTerms")]
+    partial class AddVnPayPaymentsAndSubscriptionTerms
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -39,9 +42,6 @@ namespace SportsCenterAPI.Migrations
                     b.Property<int>("MemberId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("SessionId")
-                        .HasColumnType("int");
-
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -50,11 +50,7 @@ namespace SportsCenterAPI.Migrations
 
                     b.HasIndex("ClassId");
 
-                    b.HasIndex("MemberId", "SessionId")
-                        .IsUnique()
-                        .HasFilter("[SessionId] IS NOT NULL");
-
-                    b.HasIndex("SessionId", "ClassId");
+                    b.HasIndex("MemberId");
 
                     b.ToTable("Attendances");
                 });
@@ -94,42 +90,6 @@ namespace SportsCenterAPI.Migrations
                     b.ToTable("AuditLogs");
                 });
 
-            modelBuilder.Entity("SportsCenterAPI.Models.CancellationPolicy", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("MinimumHoursBeforeStart")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("nvarchar(120)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("CancellationPolicies", t =>
-                        {
-                            t.HasCheckConstraint("CK_CancellationPolicies_Hours", "[MinimumHoursBeforeStart] BETWEEN 2 AND 720");
-                        });
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            IsActive = true,
-                            MinimumHoursBeforeStart = 2,
-                            Name = "Hủy trước ít nhất 2 tiếng"
-                        });
-                });
-
             modelBuilder.Entity("SportsCenterAPI.Models.ClassRegistration", b =>
                 {
                     b.Property<int>("Id")
@@ -138,23 +98,7 @@ namespace SportsCenterAPI.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime?>("CancellationDeadline")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CancellationReason")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<DateTime?>("CancelledAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("CancelledByUserId")
-                        .HasColumnType("int");
-
                     b.Property<int>("ClassId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("CreatedByUserId")
                         .HasColumnType("int");
 
                     b.Property<int>("MemberId")
@@ -163,128 +107,18 @@ namespace SportsCenterAPI.Migrations
                     b.Property<DateTime>("RegistrationDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion");
-
-                    b.Property<int?>("SessionId")
-                        .HasColumnType("int");
-
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CancelledByUserId");
-
                     b.HasIndex("ClassId");
-
-                    b.HasIndex("CreatedByUserId");
 
                     b.HasIndex("MemberId", "ClassId")
-                        .IsUnique()
-                        .HasFilter("[SessionId] IS NULL");
-
-                    b.HasIndex("MemberId", "SessionId")
-                        .IsUnique()
-                        .HasFilter("[SessionId] IS NOT NULL AND [Status] <> N'Cancelled'");
-
-                    b.HasIndex("SessionId", "ClassId");
-
-                    b.ToTable("ClassRegistrations");
-                });
-
-            modelBuilder.Entity("SportsCenterAPI.Models.ClassReview", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Comment")
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("Rating")
-                        .HasColumnType("int");
-
-                    b.Property<int>("RegistrationId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RegistrationId")
                         .IsUnique();
 
-                    b.ToTable("ClassReviews", t =>
-                        {
-                            t.HasCheckConstraint("CK_ClassReviews_Rating", "[Rating] BETWEEN 1 AND 5");
-                        });
-                });
-
-            modelBuilder.Entity("SportsCenterAPI.Models.ClassSession", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("CancellationPolicyId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("CancellationReason")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<int>("Capacity")
-                        .HasColumnType("int");
-
-                    b.Property<int>("ClassId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("CoachId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("EndsAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion");
-
-                    b.Property<DateTime>("StartsAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CancellationPolicyId");
-
-                    b.HasIndex("ClassId");
-
-                    b.HasIndex("CoachId", "StartsAt", "EndsAt");
-
-                    b.ToTable("ClassSessions", t =>
-                        {
-                            t.HasCheckConstraint("CK_ClassSessions_Capacity", "[Capacity] > 0");
-
-                            t.HasCheckConstraint("CK_ClassSessions_Time", "[EndsAt] > [StartsAt]");
-                        });
+                    b.ToTable("ClassRegistrations");
                 });
 
             modelBuilder.Entity("SportsCenterAPI.Models.Coach", b =>
@@ -504,6 +338,20 @@ namespace SportsCenterAPI.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<string>("CheckoutUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("GatewayResponseCode")
+                        .HasMaxLength(2)
+                        .HasColumnType("nvarchar(2)");
+
+                    b.Property<string>("GatewayTransactionNo")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<int>("MemberId")
                         .HasColumnType("int");
 
@@ -536,6 +384,10 @@ namespace SportsCenterAPI.Migrations
                     b.HasIndex("TransactionReference")
                         .IsUnique()
                         .HasFilter("[TransactionReference] IS NOT NULL");
+
+                    b.HasIndex(new[] { "SubscriptionId" }, "IX_Payments_PendingVnPay")
+                        .IsUnique()
+                        .HasFilter("[SubscriptionId] IS NOT NULL AND [Status] = N'Pending' AND [PaymentMethod] = N'VNPay'");
 
                     b.ToTable("Payments");
                 });
@@ -755,17 +607,9 @@ namespace SportsCenterAPI.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("SportsCenterAPI.Models.ClassSession", "Session")
-                        .WithMany("Attendances")
-                        .HasForeignKey("SessionId", "ClassId")
-                        .HasPrincipalKey("Id", "ClassId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.Navigation("Class");
 
                     b.Navigation("Member");
-
-                    b.Navigation("Session");
                 });
 
             modelBuilder.Entity("SportsCenterAPI.Models.AuditLog", b =>
@@ -780,21 +624,11 @@ namespace SportsCenterAPI.Migrations
 
             modelBuilder.Entity("SportsCenterAPI.Models.ClassRegistration", b =>
                 {
-                    b.HasOne("SportsCenterAPI.Models.User", "CancelledByUser")
-                        .WithMany()
-                        .HasForeignKey("CancelledByUserId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("SportsCenterAPI.Models.SportClass", "Class")
                         .WithMany("Registrations")
                         .HasForeignKey("ClassId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.HasOne("SportsCenterAPI.Models.User", "CreatedByUser")
-                        .WithMany()
-                        .HasForeignKey("CreatedByUserId")
-                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("SportsCenterAPI.Models.Member", "Member")
                         .WithMany("Registrations")
@@ -802,59 +636,9 @@ namespace SportsCenterAPI.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("SportsCenterAPI.Models.ClassSession", "Session")
-                        .WithMany("Registrations")
-                        .HasForeignKey("SessionId", "ClassId")
-                        .HasPrincipalKey("Id", "ClassId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("CancelledByUser");
-
                     b.Navigation("Class");
-
-                    b.Navigation("CreatedByUser");
 
                     b.Navigation("Member");
-
-                    b.Navigation("Session");
-                });
-
-            modelBuilder.Entity("SportsCenterAPI.Models.ClassReview", b =>
-                {
-                    b.HasOne("SportsCenterAPI.Models.ClassRegistration", "Registration")
-                        .WithMany()
-                        .HasForeignKey("RegistrationId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Registration");
-                });
-
-            modelBuilder.Entity("SportsCenterAPI.Models.ClassSession", b =>
-                {
-                    b.HasOne("SportsCenterAPI.Models.CancellationPolicy", "CancellationPolicy")
-                        .WithMany()
-                        .HasForeignKey("CancellationPolicyId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("SportsCenterAPI.Models.SportClass", "Class")
-                        .WithMany()
-                        .HasForeignKey("ClassId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("SportsCenterAPI.Models.Coach", "Coach")
-                        .WithMany()
-                        .HasForeignKey("CoachId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("CancellationPolicy");
-
-                    b.Navigation("Class");
-
-                    b.Navigation("Coach");
                 });
 
             modelBuilder.Entity("SportsCenterAPI.Models.Coach", b =>
@@ -980,13 +764,6 @@ namespace SportsCenterAPI.Migrations
                     b.Navigation("Exercise");
 
                     b.Navigation("TrainingPlan");
-                });
-
-            modelBuilder.Entity("SportsCenterAPI.Models.ClassSession", b =>
-                {
-                    b.Navigation("Attendances");
-
-                    b.Navigation("Registrations");
                 });
 
             modelBuilder.Entity("SportsCenterAPI.Models.Coach", b =>
