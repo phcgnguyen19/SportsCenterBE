@@ -10,6 +10,10 @@ namespace SportsCenterAPI.Models
         public int UserId { get; set; }
         public User User { get; set; } = null!;
         public DateTime? DateOfBirth { get; set; }
+        [System.ComponentModel.DataAnnotations.MaxLength(10)]
+        public string? Gender { get; set; }
+        [System.ComponentModel.DataAnnotations.MaxLength(100)]
+        public string? FitnessGoal { get; set; }
         public string? EmergencyContact { get; set; }
         public string? Address { get; set; }
         public DateTime JoinDate { get; set; } = DateTime.UtcNow;

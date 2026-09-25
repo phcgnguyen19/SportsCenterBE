@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace SportsCenterAPI.Models
 {
     /// <summary>
@@ -11,9 +13,16 @@ namespace SportsCenterAPI.Models
         public Member Member { get; set; } = null!;
         public int PackageId { get; set; }
         public MembershipPackage Package { get; set; } = null!;
-        public DateTime StartDate { get; set; }
-        public DateTime EndDate { get; set; }
-        public string Status { get; set; } = "Active"; // Active, Expired, Cancelled
+        // Purchase terms are fixed when the member chooses a package.
+        public decimal AgreedPrice { get; set; }
+        public int DurationInDays { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
+        public string Status { get; set; } = "Pending"; // Pending, Active, Expired, Cancelled
+
+        [Timestamp]
+        public byte[] RowVersion { get; set; } = [];
 
         // Navigation properties
         public ICollection<Payment> Payments { get; set; } = new List<Payment>();

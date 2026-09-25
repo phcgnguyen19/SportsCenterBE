@@ -5,10 +5,10 @@ namespace SportsCenterAPI.Data
 {
     /// <summary>
     /// Entity Framework Core database context for the Sports Center Management System.
-    /// Manages database connection and entity configurations for all 15 system entities.
+    /// Manages database connection and entity configurations, including class sessions and reviews.
     /// 
     /// DbContext cho hệ thống quản lý trung tâm thể thao.
-    /// Quản lý kết nối cơ sở dữ liệu và cấu hình cho toàn bộ 15 thực thể trong hệ thống.
+    /// Quản lý kết nối cơ sở dữ liệu và cấu hình các thực thể trong hệ thống.
     /// </summary>
     public class AppDbContext : DbContext
     {
@@ -16,7 +16,7 @@ namespace SportsCenterAPI.Data
         {
         }
 
-        #region DbSets - 15 System Entities
+        #region DbSets
         /// <summary>
         /// Accounts / Tài khoản người dùng (Admin, Manager, Coach, Member)
         /// </summary>
@@ -91,6 +91,9 @@ namespace SportsCenterAPI.Data
         /// System audit logs / Nhật ký kiểm toán thao tác hệ thống
         /// </summary>
         public DbSet<AuditLog> AuditLogs { get; set; } = null!;
+        public DbSet<ClassSession> ClassSessions { get; set; } = null!;
+        public DbSet<CancellationPolicy> CancellationPolicies { get; set; } = null!;
+        public DbSet<ClassReview> ClassReviews { get; set; } = null!;
         #endregion
 
         /// <summary>
@@ -121,11 +124,50 @@ namespace SportsCenterAPI.Data
                 .HasIndex(c => c.UserId)
                 .IsUnique();
 
-            // Composite unique index on ClassRegistration (MemberId, ClassId)
-            // Ngăn chặn hội viên đăng ký trùng một lớp học nhiều lần
+            // Preserve the old uniqueness rule only for legacy class-level records.
+            // New bookings are unique per member/session while not cancelled.
             modelBuilder.Entity<ClassRegistration>()
                 .HasIndex(cr => new { cr.MemberId, cr.ClassId })
-                .IsUnique();
+                .IsUnique().HasFilter("[SessionId] IS NULL");
+            modelBuilder.Entity<ClassRegistration>()
+                .HasIndex(cr => new { cr.MemberId, cr.SessionId })
+                .IsUnique().HasFilter("[SessionId] IS NOT NULL AND [Status] <> N'Cancelled'");
+            modelBuilder.Entity<ClassRegistration>().Property(r => r.Status).HasMaxLength(20);
+            modelBuilder.Entity<ClassSession>().HasAlternateKey(s => new { s.Id, s.ClassId });
+            modelBuilder.Entity<ClassRegistration>().HasOne(r => r.Session).WithMany(s => s.Registrations)
+                .HasForeignKey(r => new { r.SessionId, r.ClassId }).HasPrincipalKey(s => new { s.Id, s.ClassId });
+            modelBuilder.Entity<Attendance>().HasOne(a => a.Session).WithMany(s => s.Attendances)
+                .HasForeignKey(a => new { a.SessionId, a.ClassId }).HasPrincipalKey(s => new { s.Id, s.ClassId });
+            modelBuilder.Entity<Attendance>().HasIndex(a => new { a.MemberId, a.SessionId })
+                .IsUnique().HasFilter("[SessionId] IS NOT NULL");
+            modelBuilder.Entity<ClassRegistration>().HasOne(r => r.CreatedByUser).WithMany().HasForeignKey(r => r.CreatedByUserId);
+            modelBuilder.Entity<ClassRegistration>().HasOne(r => r.CancelledByUser).WithMany().HasForeignKey(r => r.CancelledByUserId);
+            modelBuilder.Entity<ClassReview>().HasIndex(r => r.RegistrationId).IsUnique();
+            modelBuilder.Entity<ClassReview>().ToTable(t => t.HasCheckConstraint("CK_ClassReviews_Rating", "[Rating] BETWEEN 1 AND 5"));
+            modelBuilder.Entity<ClassSession>().HasIndex(s => new { s.CoachId, s.StartsAt, s.EndsAt });
+            modelBuilder.Entity<ClassSession>().ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_ClassSessions_Time", "[EndsAt] > [StartsAt]");
+                t.HasCheckConstraint("CK_ClassSessions_Capacity", "[Capacity] > 0");
+            });
+            modelBuilder.Entity<CancellationPolicy>().ToTable(t => t.HasCheckConstraint("CK_CancellationPolicies_Hours", "[MinimumHoursBeforeStart] BETWEEN 2 AND 720"));
+            modelBuilder.Entity<CancellationPolicy>().HasData(new CancellationPolicy
+            {
+                Id = 1, Name = "Hủy trước ít nhất 2 tiếng", MinimumHoursBeforeStart = 2, IsActive = true
+            });
+
+            modelBuilder.Entity<MemberSubscription>()
+                .HasIndex(subscription => new { subscription.MemberId, subscription.PackageId, subscription.Status });
+            modelBuilder.Entity<MemberSubscription>()
+                .Property(subscription => subscription.Status).HasMaxLength(20);
+            modelBuilder.Entity<Payment>()
+                .HasIndex(payment => payment.SubscriptionId).IsUnique()
+                .HasFilter("[SubscriptionId] IS NOT NULL AND [Status] = N'Completed'");
+            modelBuilder.Entity<Payment>()
+                .Property(payment => payment.TransactionReference).HasMaxLength(100);
+            modelBuilder.Entity<Payment>()
+                .HasIndex(payment => payment.TransactionReference).IsUnique()
+                .HasFilter("[TransactionReference] IS NOT NULL");
             #endregion
 
             #region 2. Decimal Precision Configurations / Cấu hình độ chính xác số tiền
@@ -139,6 +181,9 @@ namespace SportsCenterAPI.Data
             modelBuilder.Entity<MembershipPackage>()
                 .Property(mp => mp.Price)
                 .HasPrecision(18, 2);
+
+            modelBuilder.Entity<MemberSubscription>()
+                .Property(subscription => subscription.AgreedPrice).HasPrecision(18, 2);
 
             // SportClass Price precision (18, 2)
             modelBuilder.Entity<SportClass>()
