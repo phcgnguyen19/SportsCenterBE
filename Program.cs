@@ -1,15 +1,16 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using System.Text;
+using Microsoft.OpenApi;
 using Scalar.AspNetCore;
 using SportsCenterAPI.Data;
 using SportsCenterAPI.Middleware;
+using SportsCenterAPI.Models;
 using SportsCenterAPI.Services.Implement;
 using SportsCenterAPI.Services.Interface;
-using Microsoft.OpenApi;
-using SportsCenterAPI.Models;
+using System.Reflection.Metadata;
 using System.Security.Claims;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,40 +19,71 @@ var builder = WebApplication.CreateBuilder(args);
 // Controllers
 builder.Services.AddControllers();
 
-// OpenAPI/Scalar
-builder.Services.AddOpenApi(options =>
+// Swagger / OpenAPI Documentation
+builder.Services.AddSwaggerGen(option =>
 {
-    options.AddDocumentTransformer((document, context, cancellationToken) =>
+    option.SwaggerDoc("v1", new Microsoft.OpenApi.OpenApiInfo
     {
-        document.Components ??= new();
-        document.Components.SecuritySchemes ??=
-            new Dictionary<string, IOpenApiSecurityScheme>();
-
-        document.Components.SecuritySchemes["Bearer"] =
-            new OpenApiSecurityScheme
-            {
-                Type = SecuritySchemeType.Http,
-                Scheme = "bearer",
-                BearerFormat = "JWT",
-                Description = "Enter JWT Bearer Token."
-            };
-
-        return Task.CompletedTask;
+        Title = "Sports Center Management System API",
+        Version = "v1",
+        Description = "API for managing sports center operations, including user accounts, memberships, and classes."
     });
-    options.AddOperationTransformer((operation, context, cancellationToken) =>
+
+    // 1. Định nghĩa cách nhập Token
+    option.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.OpenApiSecurityScheme
     {
-        var metadata = context.Description.ActionDescriptor.EndpointMetadata;
-        if (metadata.OfType<Microsoft.AspNetCore.Authorization.IAuthorizeData>().Any() &&
-            !metadata.OfType<Microsoft.AspNetCore.Authorization.IAllowAnonymous>().Any())
+        Name = "Authorization",
+        Type = Microsoft.OpenApi.SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = Microsoft.OpenApi.ParameterLocation.Header,
+        Description = "Nhập trực tiếp JWT Token vào ô dưới đây (không cần gõ 'Bearer ')"
+    });
+
+    // 2. Yêu cầu Swagger UI phải tự động gắn Token vào Request Header
+    option.AddSecurityRequirement(document => new Microsoft.OpenApi.OpenApiSecurityRequirement
+    {
         {
-            operation.Security = [new OpenApiSecurityRequirement
-            {
-                [new OpenApiSecuritySchemeReference("Bearer", context.Document)] = []
-            }];
+            new Microsoft.OpenApi.OpenApiSecuritySchemeReference("Bearer", document),
+            new List<string>()
         }
-        return Task.CompletedTask;
     });
 });
+
+// OpenAPI/Scalar
+//builder.Services.AddOpenApi(options =>
+//{
+//    options.AddDocumentTransformer((document, context, cancellationToken) =>
+//    {
+//        document.Components ??= new();
+//        document.Components.SecuritySchemes ??=
+//            new Dictionary<string, IOpenApiSecurityScheme>();
+
+//        document.Components.SecuritySchemes["Bearer"] =
+//            new OpenApiSecurityScheme
+//            {
+//                Type = SecuritySchemeType.Http,
+//                Scheme = "bearer",
+//                BearerFormat = "JWT",
+//                Description = "Enter JWT Bearer Token."
+//            };
+
+//        return Task.CompletedTask;
+//    });
+//    options.AddOperationTransformer((operation, context, cancellationToken) =>
+//    {
+//        var metadata = context.Description.ActionDescriptor.EndpointMetadata;
+//        if (metadata.OfType<Microsoft.AspNetCore.Authorization.IAuthorizeData>().Any() &&
+//            !metadata.OfType<Microsoft.AspNetCore.Authorization.IAllowAnonymous>().Any())
+//        {
+//            operation.Security = [new OpenApiSecurityRequirement
+//            {
+//                [new OpenApiSecuritySchemeReference("Bearer", context.Document)] = []
+//            }];
+//        }
+//        return Task.CompletedTask;
+//    });
+//});
 
 // Entity Framework Core + SQL Server
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -126,6 +158,14 @@ if (app.Environment.IsDevelopment() || builder.Configuration.GetValue<bool>("Ope
 {
     app.MapOpenApi();
     app.MapScalarApiReference();
+
+    //bật giao diện Swagger UI khi chạy ứng dụng
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Sports Center Management System API v1");
+        c.RoutePrefix = "swagger"; // đường dẫn để truy cập Swagger UI, ví dụ: http://localhost:5000/swagger
+    });
 }
 
 app.UseHttpsRedirection();
