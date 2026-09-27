@@ -1,17 +1,98 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SportsCenterAPI.Models;
 using SportsCenterAPI.Models.DTOs.Classes;
+using SportsCenterAPI.Models.DTOs.Response;
 using SportsCenterAPI.Services.Interface;
 
 namespace SportsCenterAPI.Controllers;
 
-[ApiController, Route("api/cancellation-policies"), Authorize(Roles = "Manager")]
-public class CancellationPoliciesController(IClassService service) : Flow2ControllerBase
+[ApiController]
+[Route("api/cancellation-policies")]
+[Authorize(Roles = "Manager")]
+public class CancellationPoliciesController(IClassService classService)
+    : Flow2ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> Get(CancellationToken ct) => Success(await service.GetPoliciesAsync(ActorId(), ct));
+    [ProducesResponseType(
+        typeof(ApiResponse<List<CancellationPolicy>>),
+        StatusCodes.Status200OK)]
+    [ProducesResponseType(
+        typeof(ApiResponse<object>),
+        StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(
+        typeof(ApiResponse<object>),
+        StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<ApiResponse<List<CancellationPolicy>>>> Get(
+        CancellationToken ct)
+    {
+        var policies = await classService.GetPoliciesAsync(ActorId(), ct);
+
+        return Ok(
+            ApiResponse<List<CancellationPolicy>>.Ok(
+                policies,
+                "Cancellation policies retrieved successfully"));
+    }
+
     [HttpPost]
-    public async Task<IActionResult> Create(PolicyRequest request, CancellationToken ct) => Success(await service.SavePolicyAsync(ActorId(), null, request, ct));
+    [ProducesResponseType(
+        typeof(ApiResponse<CancellationPolicy>),
+        StatusCodes.Status200OK)]
+    [ProducesResponseType(
+        typeof(ApiResponse<object>),
+        StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(
+        typeof(ApiResponse<object>),
+        StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(
+        typeof(ApiResponse<object>),
+        StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<ApiResponse<CancellationPolicy>>> Create(
+        PolicyRequest request,
+        CancellationToken ct)
+    {
+        var policy = await classService.SavePolicyAsync(
+            ActorId(),
+            null,
+            request,
+            ct);
+
+        return Ok(
+            ApiResponse<CancellationPolicy>.Ok(
+                policy,
+                "Cancellation policy created successfully"));
+    }
+
     [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id, PolicyRequest request, CancellationToken ct) => Success(await service.SavePolicyAsync(ActorId(), id, request, ct));
+    [ProducesResponseType(
+        typeof(ApiResponse<CancellationPolicy>),
+        StatusCodes.Status200OK)]
+    [ProducesResponseType(
+        typeof(ApiResponse<object>),
+        StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(
+        typeof(ApiResponse<object>),
+        StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(
+        typeof(ApiResponse<object>),
+        StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(
+        typeof(ApiResponse<object>),
+        StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ApiResponse<CancellationPolicy>>> Update(
+        int id,
+        PolicyRequest request,
+        CancellationToken ct)
+    {
+        var policy = await classService.SavePolicyAsync(
+            ActorId(),
+            id,
+            request,
+            ct);
+
+        return Ok(
+            ApiResponse<CancellationPolicy>.Ok(
+                policy,
+                "Cancellation policy updated successfully"));
+    }
 }
