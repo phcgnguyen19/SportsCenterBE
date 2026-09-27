@@ -8,9 +8,11 @@ using SportsCenterAPI.Middleware;
 using SportsCenterAPI.Models;
 using SportsCenterAPI.Services.Implement;
 using SportsCenterAPI.Services.Interface;
+using SportsCenterAPI.Settings;
 using System.Reflection.Metadata;
 using System.Security.Claims;
 using System.Text;
+using SportsCenterAPI.Settings;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -146,6 +148,10 @@ builder.Services.AddScoped<IMembershipPackageService, MembershipPackageService>(
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<IClassService, ClassService>();
+builder.Services.Configure<MailSettings>(
+    builder.Configuration.GetSection("MailSettings"));
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddMemoryCache();
 
 var app = builder.Build();
 
