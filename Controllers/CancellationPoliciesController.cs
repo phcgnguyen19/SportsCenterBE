@@ -28,7 +28,7 @@ public class CancellationPoliciesController(IClassService service)
 
         return Ok(ApiResponse<List<CancellationPolicy>>.Ok(
             policies,
-            "L?y danh sách chính sách h?y thành công."));
+            "L?y danh sï¿½ch chï¿½nh sï¿½ch h?y thï¿½nh cï¿½ng."));
     }
 
     [HttpPost]
@@ -41,7 +41,7 @@ public class CancellationPoliciesController(IClassService service)
 
         return Ok(ApiResponse<CancellationPolicy>.Ok(
             policy,
-            "T?o chính sách h?y thành công."));
+            "T?o chï¿½nh sï¿½ch h?y thï¿½nh cï¿½ng."));
     }
 
     [HttpPut("{id:int}")]
@@ -55,7 +55,7 @@ public class CancellationPoliciesController(IClassService service)
 
         return Ok(ApiResponse<CancellationPolicy>.Ok(
             policy,
-            "C?p nh?t chính sách h?y thành công."));
+            "C?p nh?t chï¿½nh sï¿½ch h?y thï¿½nh cï¿½ng."));
     }
 
     private int GetActorId()
@@ -64,7 +64,7 @@ public class CancellationPoliciesController(IClassService service)
 
         if (!int.TryParse(value, out var actorId))
         {
-            throw new BusinessException(401, "Vui lòng ??ng nh?p.");
+            throw new BusinessException(401, "Vui lï¿½ng ??ng nh?p.");
         }
 
         return actorId;
