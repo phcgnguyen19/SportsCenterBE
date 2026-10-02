@@ -3,32 +3,60 @@ using Microsoft.AspNetCore.Mvc;
 using SportsCenterAPI.Models.DTOs.Auth;
 using SportsCenterAPI.Models.DTOs.Login;
 using SportsCenterAPI.Models.DTOs.Register;
-using SportsCenterAPI.Models.DTOs.Response;
 using SportsCenterAPI.Services.Interface;
 
 namespace SportsCenterAPI.Controllers;
 
 [ApiController]
-[Route("api/auth")]
-[AllowAnonymous]
+[Route("api/[controller]")]
 public class AuthController(IAuthService authService) : ControllerBase
 {
+    [AllowAnonymous]
     [HttpPost("login")]
-    [ProducesResponseType(typeof(ApiResponse<AuthResponse>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult<ApiResponse<AuthResponse>>> Login(LoginRequestDTO request)
+    public async Task<IActionResult> Login(
+        [FromBody] LoginRequestDTO request)
     {
         var response = await authService.LoginAsync(request);
-        return Ok(ApiResponse<AuthResponse>.Ok(response, "Login successful"));
+        return Ok(response);
     }
 
-    [HttpPost("register")]
-    [ProducesResponseType(typeof(ApiResponse<AuthResponse>), StatusCodes.Status201Created)]
-    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status409Conflict)]
-    public async Task<ActionResult<ApiResponse<AuthResponse>>> Register(RegisterRequestDTO request)
+    [AllowAnonymous]
+    [HttpPost("send-register-otp")]
+    public async Task<IActionResult> SendRegisterOtp(
+        [FromBody] RegisterRequestDTO request)
     {
-        var response = await authService.RegisterAsync(request);
-        return StatusCode(StatusCodes.Status201Created,
-            ApiResponse<AuthResponse>.CreatedAt(response, "Registration successful"));
+        await authService.SendRegisterOtpAsync(request);
+        return Ok(new { message = "Registration OTP sent." });
+    }
+
+    [AllowAnonymous]
+    [HttpPost("verify-register-otp")]
+    public async Task<IActionResult> VerifyRegisterOtp(
+        [FromBody] VerifyRegisterOtpDTO request)
+    {
+        var response = await authService.VerifyRegisterOtpAsync(request);
+        return Ok(response);
+    }
+
+    [AllowAnonymous]
+    [HttpPost("request-reset-password")]
+    public async Task<IActionResult> RequestResetPasswordOtp(
+        [FromBody] RequestOtpDTO request)
+    {
+        await authService.RequestResetPasswordOtpAsync(request);
+
+        return Ok(new
+        {
+            message = "If the account exists, an OTP has been sent."
+        });
+    }
+
+    [AllowAnonymous]
+    [HttpPost("verify-reset-password")]
+    public async Task<IActionResult> VerifyResetPasswordOtp(
+        [FromBody] VerifyResetPasswordOtpDTO request)
+    {
+        await authService.VerifyResetPasswordOtpAsync(request);
+        return Ok(new { message = "Password updated successfully." });
     }
 }

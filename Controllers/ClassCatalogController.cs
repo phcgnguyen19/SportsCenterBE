@@ -1,60 +1,103 @@
-using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using SportsCenterAPI.Data;
-using SportsCenterAPI.Helpers;
-using SportsCenterAPI.Models;
+using SportsCenterAPI.Models.DTOs.Classes;
+using SportsCenterAPI.Models.DTOs.Response;
+using SportsCenterAPI.Services.Interface;
 
 namespace SportsCenterAPI.Controllers;
 
-public class SportRequest
+[ApiController]
+[Route("api")]
+[Authorize(Roles = "Manager")]
+public class ClassCatalogController : ControllerBase
 {
-    [Required, StringLength(120)] public string Name { get; set; } = string.Empty;
-    [StringLength(2000)] public string? Description { get; set; }
-    public bool IsActive { get; set; } = true;
-}
-public class CoachProfileRequest
-{
-    [StringLength(200)] public string? Specialization { get; set; }
-    [StringLength(2000)] public string? Bio { get; set; }
-    [Range(0, 80)] public int YearsOfExperience { get; set; }
-}
+    private readonly IClassCatalogService _classCatalogService;
 
-[ApiController, Route("api"), Authorize(Roles = "Manager")]
-public class ClassCatalogController(AppDbContext db) : Flow2ControllerBase
-{
-    [HttpGet("sports"), AllowAnonymous]
-    public async Task<IActionResult> Sports(CancellationToken ct) => Success(await db.Sports.AsNoTracking().Where(s => s.IsActive)
-        .OrderBy(s => s.Id).Select(s => new { s.Id, s.Name, s.Description }).ToListAsync(ct));
+    public ClassCatalogController(
+        IClassCatalogService classCatalogService)
+    {
+        _classCatalogService = classCatalogService;
+    }
+
+    [HttpGet("sports")]
+    [AllowAnonymous]
+    public async Task<ActionResult<ApiResponse<List<SportListDTO>>>> GetSports(
+        CancellationToken cancellationToken)
+    {
+        var sports = await _classCatalogService.GetSportsAsync(
+            cancellationToken);
+
+        var response = ApiResponse<List<SportListDTO>>.Ok(
+            sports,
+            "Thành công.");
+
+        return Ok(response);
+    }
+
     [HttpPost("sports")]
-    public async Task<IActionResult> CreateSport(SportRequest request, CancellationToken ct)
+    public async Task<ActionResult<ApiResponse<SportDTO>>> CreateSport(
+        [FromBody] SportRequestDTO sportRequestDTO,
+        CancellationToken cancellationToken)
     {
-        var sport = new Sport { Name = request.Name.Trim(), Description = request.Description?.Trim(), IsActive = request.IsActive };
-        db.Sports.Add(sport); await db.SaveChangesAsync(ct);
-        return Success(new { sport.Id, sport.Name, sport.Description, sport.IsActive });
+        var sport = await _classCatalogService.CreateSportAsync(
+            sportRequestDTO,
+            cancellationToken);
+
+        var response = ApiResponse<SportDTO>.Ok(
+            sport,
+            "Thành công.");
+
+        return Ok(response);
     }
+
     [HttpPut("sports/{id:int}")]
-    public async Task<IActionResult> UpdateSport(int id, SportRequest request, CancellationToken ct)
+    public async Task<ActionResult<ApiResponse<SportDTO>>> UpdateSport(
+        int id,
+        [FromBody] SportRequestDTO sportRequestDTO,
+        CancellationToken cancellationToken)
     {
-        await using var transaction = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
-        var sport = await db.Sports.SingleOrDefaultAsync(s => s.Id == id, ct) ?? throw new BusinessException(404, "Không tìm thấy bộ môn.");
-        if (!request.IsActive && await db.ClassSessions.AnyAsync(s => s.Class.SportId == id && s.Status == "Scheduled", ct))
-            throw new BusinessException(409, "Bộ môn vẫn còn buổi học chưa hoàn thành/hủy.");
-        sport.Name = request.Name.Trim(); sport.Description = request.Description?.Trim(); sport.IsActive = request.IsActive;
-        await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
-        return Success(new { sport.Id, sport.Name, sport.Description, sport.IsActive });
+        var sport = await _classCatalogService.UpdateSportAsync(
+            id,
+            sportRequestDTO,
+            cancellationToken);
+
+        var response = ApiResponse<SportDTO>.Ok(
+            sport,
+            "Thành công.");
+
+        return Ok(response);
     }
-    [HttpGet("coaches"), AllowAnonymous]
-    public async Task<IActionResult> Coaches(CancellationToken ct) => Success(await db.Coaches.AsNoTracking()
-        .Where(c => c.User.IsActive && c.User.Role == "Coach").OrderBy(c => c.Id)
-        .Select(c => new { c.Id, c.User.FullName, c.Specialization, c.Bio, c.YearsOfExperience }).ToListAsync(ct));
-    [HttpPut("coaches/{id:int}/profile")]
-    public async Task<IActionResult> UpdateCoach(int id, CoachProfileRequest request, CancellationToken ct)
+
+    [HttpGet("coaches")]
+    [AllowAnonymous]
+    public async Task<ActionResult<ApiResponse<List<CoachDTO>>>> GetCoaches(
+        CancellationToken cancellationToken)
     {
-        var coach = await db.Coaches.SingleOrDefaultAsync(c => c.Id == id, ct) ?? throw new BusinessException(404, "Không tìm thấy HLV.");
-        coach.Specialization = request.Specialization?.Trim(); coach.Bio = request.Bio?.Trim(); coach.YearsOfExperience = request.YearsOfExperience;
-        await db.SaveChangesAsync(ct);
-        return Success(new { coach.Id, coach.Specialization, coach.Bio, coach.YearsOfExperience });
+        var coaches = await _classCatalogService.GetCoachesAsync(
+            cancellationToken);
+
+        var response = ApiResponse<List<CoachDTO>>.Ok(
+            coaches,
+            "Thành công.");
+
+        return Ok(response);
+    }
+
+    [HttpPut("coaches/{id:int}/profile")]
+    public async Task<ActionResult<ApiResponse<CoachProfileDTO>>> UpdateCoach(
+        int id,
+        [FromBody] CoachProfileRequestDTO coachProfileRequestDTO,
+        CancellationToken cancellationToken)
+    {
+        var coach = await _classCatalogService.UpdateCoachAsync(
+            id,
+            coachProfileRequestDTO,
+            cancellationToken);
+
+        var response = ApiResponse<CoachProfileDTO>.Ok(
+            coach,
+            "Thành công.");
+
+        return Ok(response);
     }
 }
