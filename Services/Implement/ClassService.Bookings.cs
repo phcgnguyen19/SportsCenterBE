@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using SportsCenterAPI.DTOs.Classes;
 using SportsCenterAPI.Helpers;
 using SportsCenterAPI.Models;
-using SportsCenterAPI.Models.DTOs.Classes;
 
 namespace SportsCenterAPI.Services.Implement;
 

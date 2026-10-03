@@ -21,6 +21,7 @@ namespace SportsCenterAPI.Data
         /// Accounts / Tài khoản người dùng (Admin, Manager, Coach, Member)
         /// </summary>
         public DbSet<User> Users { get; set; } = null!;
+        public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
 
         /// <summary>
         /// Member profiles / Hồ sơ hội viên

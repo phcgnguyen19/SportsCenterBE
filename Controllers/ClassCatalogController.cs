@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SportsCenterAPI.Models.DTOs.Classes;
-using SportsCenterAPI.Models.DTOs.Response;
+using SportsCenterAPI.DTOs.ClassCatalog;
+using SportsCenterAPI.DTOs.Response;
 using SportsCenterAPI.Services.Interface;
 
 namespace SportsCenterAPI.Controllers;

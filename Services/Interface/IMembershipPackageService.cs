@@ -1,4 +1,4 @@
-using SportsCenterAPI.Models.DTOs.MembershipPackages;
+using SportsCenterAPI.DTOs.MembershipPackages;
 
 namespace SportsCenterAPI.Services.Interface;
 

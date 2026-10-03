@@ -2,9 +2,9 @@ using System.Data;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using SportsCenterAPI.Data;
+using SportsCenterAPI.DTOs.Subscriptions;
 using SportsCenterAPI.Helpers;
 using SportsCenterAPI.Models;
-using SportsCenterAPI.Models.DTOs.Subscriptions;
 using SportsCenterAPI.Services.Interface;
 
 namespace SportsCenterAPI.Services.Implement;

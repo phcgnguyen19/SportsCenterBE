@@ -1,4 +1,4 @@
-﻿using SportsCenterAPI.Models.DTOs.Classes;
+﻿using SportsCenterAPI.DTOs.ClassCatalog;
 
 namespace SportsCenterAPI.Services.Interface;
 

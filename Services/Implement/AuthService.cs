@@ -1,12 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using SportsCenterAPI.Data;
+using SportsCenterAPI.DTOs.Accounts;
+using SportsCenterAPI.DTOs.Auth;
+using SportsCenterAPI.DTOs.Login;
+using SportsCenterAPI.DTOs.Register;
 using SportsCenterAPI.Helpers;
 using SportsCenterAPI.Models;
-using SportsCenterAPI.Models.DTOs.Accounts;
-using SportsCenterAPI.Models.DTOs.Auth;
-using SportsCenterAPI.Models.DTOs.Login;
-using SportsCenterAPI.Models.DTOs.Register;
 using SportsCenterAPI.Services.Interface;
 using System.Security.Cryptography;
 using System.Text;
@@ -46,13 +46,13 @@ public class AuthService(
                 "Invalid email or password.");
         }
 
-        return CreateAuthResponse(user);
+        return await CreateAuthResponseAsync(user);
     }
 
     public async Task<AuthResponse> RegisterAsync(RegisterRequestDTO request)
     {
         var user = await CreateMemberAccountAsync(request);
-        return CreateAuthResponse(user);
+        return await CreateAuthResponseAsync(user);
     }
 
     // Lễ tân tạo tài khoản cho member, nhưng không đăng nhập thay member.
@@ -136,7 +136,7 @@ public class AuthService(
         var user = await CreateMemberAccountAsync(pending.Request);
 
         cache.Remove(key);
-        return CreateAuthResponse(user);
+        return await CreateAuthResponseAsync(user);
     }
 
     public async Task RequestResetPasswordOtpAsync(RequestOtpDTO request)
@@ -207,6 +207,13 @@ public class AuthService(
         user.PasswordHash =
             PasswordHelper.HashPassword(request.NewPassword);
 
+        // Save the password and refresh-token revocations in the same transaction.
+        var refreshTokens = await context.RefreshTokens
+            .Where(token => token.UserId == user.Id && !token.IsRevoked)
+            .ToListAsync();
+        foreach (var token in refreshTokens)
+            token.IsRevoked = true;
+
         await context.SaveChangesAsync();
         cache.Remove(key);
     }
@@ -258,6 +265,89 @@ public class AuthService(
         return user;
     }
 
+    public async Task<AuthResponse> RenewToken(RefreshTokenDTO tokenDTO)
+    {
+        ValidateRefreshTokenRequest(tokenDTO);
+        var tokenHash = HashRefreshToken(tokenDTO.RefreshTokenKey);
+
+        // Tracked so RowVersion prevents two requests from rotating the same token.
+        var storedToken = await context.RefreshTokens
+            .Include(token => token.User)
+            .SingleOrDefaultAsync(token => token.TokenHash == tokenHash);
+
+        if (storedToken is null || storedToken.IsRevoked ||
+            storedToken.ExpiresAt <= DateTime.UtcNow || !storedToken.User.IsActive)
+        {
+            throw new UnauthorizedAccessException("Refresh token is invalid or expired.");
+        }
+
+        var refreshTokenKey = GenerateRefreshToken();
+        var response = CreateAuthResponse(storedToken.User);
+        response.RefreshTokenKey = refreshTokenKey;
+        response.RefreshTokenExpiresAt = DateTime.SpecifyKind(storedToken.ExpiresAt, DateTimeKind.Utc);
+
+        // Rotate the secret without extending the original session lifetime.
+        storedToken.TokenHash = HashRefreshToken(refreshTokenKey);
+        try
+        {
+            await context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new UnauthorizedAccessException("Refresh token has already been used or revoked.");
+        }
+
+        return response;
+    }
+
+    public async Task Logout(RefreshTokenDTO tokenDTO)
+    {
+        ValidateRefreshTokenRequest(tokenDTO);
+        var tokenHash = HashRefreshToken(tokenDTO.RefreshTokenKey);
+
+        // Idempotent, atomic revocation. The client must send its latest refresh token.
+        await context.RefreshTokens
+            .Where(token => token.TokenHash == tokenHash && !token.IsRevoked)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(token => token.IsRevoked, true));
+    }
+
+    private async Task<AuthResponse> CreateAuthResponseAsync(User user)
+    {
+        var expireDays = configuration.GetValue<int>("Jwt:RefreshTokenExpireDays", 7);
+        if (expireDays <= 0)
+            throw new InvalidOperationException("Jwt:RefreshTokenExpireDays must be positive.");
+
+        var now = DateTime.UtcNow;
+        var expiresAt = now.AddDays(expireDays);
+        var refreshTokenKey = GenerateRefreshToken();
+        var response = CreateAuthResponse(user);
+        response.RefreshTokenKey = refreshTokenKey;
+        response.RefreshTokenExpiresAt = expiresAt;
+
+        context.RefreshTokens.Add(new RefreshToken
+        {
+            UserId = user.Id,
+            TokenHash = HashRefreshToken(refreshTokenKey),
+            CreatedAt = now,
+            ExpiresAt = expiresAt
+        });
+        await context.SaveChangesAsync();
+        return response;
+    }
+
+    private static void ValidateRefreshTokenRequest(RefreshTokenDTO tokenDTO)
+    {
+        if (tokenDTO is null || string.IsNullOrWhiteSpace(tokenDTO.RefreshTokenKey) ||
+            tokenDTO.RefreshTokenKey.Length > 200)
+            throw new ArgumentException("A refresh token of at most 200 characters is required.");
+    }
+
+    private static string GenerateRefreshToken() =>
+        Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
+
+    private static string HashRefreshToken(string token) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
+
     private AuthResponse CreateAuthResponse(User user)
     {
         var jwtSettings = configuration.GetSection("Jwt");
@@ -273,7 +363,7 @@ public class AuthService(
                 jwtSettings["SecretKey"]!,
                 jwtSettings["Issuer"]!,
                 jwtSettings["Audience"]!,
-                int.Parse(jwtSettings["ExpireMinutes"] ?? "60"))
+                int.Parse(jwtSettings["ExpireMinutes"] ?? "15"))
         };
     }
 
