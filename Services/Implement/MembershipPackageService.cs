@@ -2,9 +2,9 @@ using System.Linq.Expressions;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using SportsCenterAPI.Data;
+using SportsCenterAPI.DTOs.MembershipPackages;
 using SportsCenterAPI.Helpers;
 using SportsCenterAPI.Models;
-using SportsCenterAPI.Models.DTOs.MembershipPackages;
 using SportsCenterAPI.Services.Interface;
 
 namespace SportsCenterAPI.Services.Implement;

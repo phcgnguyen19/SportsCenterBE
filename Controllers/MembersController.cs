@@ -1,10 +1,10 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SportsCenterAPI.DTOs.Accounts;
+using SportsCenterAPI.DTOs.Register;
+using SportsCenterAPI.DTOs.Response;
 using SportsCenterAPI.Helpers;
-using SportsCenterAPI.Models.DTOs.Accounts;
-using SportsCenterAPI.Models.DTOs.Register;
-using SportsCenterAPI.Models.DTOs.Response;
 using SportsCenterAPI.Services.Interface;
 
 namespace SportsCenterAPI.Controllers;

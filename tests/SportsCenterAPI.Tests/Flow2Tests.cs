@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using SportsCenterAPI.Data;
 using SportsCenterAPI.Helpers;
 using SportsCenterAPI.Models;
-using SportsCenterAPI.Models.DTOs.Classes;
+using SportsCenterAPI.DTOs.Classes;
 using SportsCenterAPI.Services.Implement;
 
 namespace SportsCenterAPI.Tests;
