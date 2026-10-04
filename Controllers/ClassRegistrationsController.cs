@@ -5,17 +5,122 @@ using SportsCenterAPI.Services.Interface;
 
 namespace SportsCenterAPI.Controllers;
 
-[ApiController, Route("api/class-registrations"), Authorize]
-public class ClassRegistrationsController(IClassService service) : Flow2ControllerBase
+[ApiController]
+[Route("api/class-registrations")]
+[Authorize]
+public class ClassRegistrationsController : BaseApiController
 {
-    [HttpGet("mine"), Authorize(Roles = "Member")]
-    public async Task<IActionResult> Mine(CancellationToken ct, int page = 1, int pageSize = 20) => Success(await service.GetRegistrationsAsync(ActorId(), null, page, pageSize, ct));
-    [HttpGet("members/{memberId:int}"), Authorize(Roles = "Receptionist,Manager")]
-    public async Task<IActionResult> ForMember(int memberId, CancellationToken ct, int page = 1, int pageSize = 20) => Success(await service.GetRegistrationsAsync(ActorId(), memberId, page, pageSize, ct));
-    [HttpPost("{id:int}/cancel"), Authorize(Roles = "Member,Receptionist,Manager")]
-    public async Task<IActionResult> Cancel(int id, CancelRequest request, CancellationToken ct) => Success(await service.CancelRegistrationAsync(ActorId(), id, request, ct), "Đã hủy và giải phóng chỗ.");
-    [HttpPost("{id:int}/check-in"), Authorize(Roles = "Member,Coach,Receptionist,Manager")]
-    public async Task<IActionResult> CheckIn(int id, CancellationToken ct) => Success(await service.CheckInAsync(ActorId(), id, ct), "Đã điểm danh.");
-    [HttpPost("{id:int}/review"), Authorize(Roles = "Member")]
-    public async Task<IActionResult> Review(int id, ReviewRequest request, CancellationToken ct) => Success(await service.ReviewAsync(ActorId(), id, request, ct));
+    private readonly IClassService _classService;
+
+    public ClassRegistrationsController(IClassService classService)
+    {
+        _classService = classService;
+    }
+
+    // 1. Hội viên xem các đăng ký lớp của mình.
+    // GET /api/class-registrations/mine?page=1&pageSize=20
+    [HttpGet("mine")]
+    [Authorize(Roles = "Member")]
+    public async Task<IActionResult> Mine(
+        CancellationToken cancellationToken,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
+    {
+        var userId = ActorId();
+
+        // memberId = null: service tìm hội viên từ userId.
+        var registrations = await _classService.GetRegistrationsAsync(
+            actorId: userId,
+            memberId: null,
+            page: page,
+            pageSize: pageSize,
+            ct: cancellationToken);
+
+        return Success(registrations);
+    }
+
+    // 2. Lễ tân hoặc quản lý xem đăng ký của một hội viên.
+    // GET /api/class-registrations/members/10?page=1&pageSize=20
+    [HttpGet("members/{memberId:int}")]
+    [Authorize(Roles = "Receptionist,Manager")]
+    public async Task<IActionResult> ForMember(
+        [FromRoute] int memberId,
+        CancellationToken cancellationToken,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
+    {
+        var staffUserId = ActorId();
+
+        var registrations = await _classService.GetRegistrationsAsync(
+            actorId: staffUserId,
+            memberId: memberId,
+            page: page,
+            pageSize: pageSize,
+            ct: cancellationToken);
+
+        return Success(registrations);
+    }
+
+    // 3. Hủy một đăng ký và giải phóng chỗ.
+    // Service kiểm tra quyền sở hữu và hạn hủy.
+    // POST /api/class-registrations/5/cancel
+    [HttpPost("{id:int}/cancel")]
+    [Authorize(Roles = "Member,Receptionist,Manager")]
+    public async Task<IActionResult> Cancel(
+        [FromRoute] int id,
+        [FromBody] CancelRequest request,
+        CancellationToken cancellationToken)
+    {
+        var userId = ActorId();
+
+        var registration = await _classService.CancelRegistrationAsync(
+            userId,
+            id,
+            request,
+            cancellationToken);
+
+        return Success(
+            registration,
+            "Đã hủy và giải phóng chỗ.");
+    }
+
+    // 4. Check-in cho một đăng ký lớp.
+    // Service kiểm tra quyền và thời gian được phép check-in.
+    // POST /api/class-registrations/5/check-in
+    [HttpPost("{id:int}/check-in")]
+    [Authorize(Roles = "Member,Coach,Receptionist,Manager")]
+    public async Task<IActionResult> CheckIn(
+        [FromRoute] int id,
+        CancellationToken cancellationToken)
+    {
+        var userId = ActorId();
+
+        var attendance = await _classService.CheckInAsync(
+            userId,
+            id,
+            cancellationToken);
+
+        return Success(attendance, "Đã điểm danh.");
+    }
+
+    // 5. Hội viên đánh giá buổi học mình đã tham gia.
+    // Service kiểm tra buổi học đã hoàn thành và có điểm danh.
+    // POST /api/class-registrations/5/review
+    [HttpPost("{id:int}/review")]
+    [Authorize(Roles = "Member")]
+    public async Task<IActionResult> Review(
+        [FromRoute] int id,
+        [FromBody] ReviewRequest request,
+        CancellationToken cancellationToken)
+    {
+        var userId = ActorId();
+
+        var review = await _classService.ReviewAsync(
+            userId,
+            id,
+            request,
+            cancellationToken);
+
+        return Success(review);
+    }
 }

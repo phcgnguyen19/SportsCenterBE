@@ -6,27 +6,106 @@ using SportsCenterAPI.Helpers;
 
 namespace SportsCenterAPI.Controllers;
 
-[ApiController, Route("api/notifications"), Authorize]
-public class NotificationsController(AppDbContext db) : Flow2ControllerBase
+[ApiController]
+[Route("api/notifications")]
+[Authorize]
+public class NotificationsController : BaseApiController
 {
-    [HttpGet]
-    public async Task<IActionResult> Get(CancellationToken ct, bool unreadOnly = false, int page = 1, int pageSize = 20)
+    private readonly AppDbContext _context;
+
+    public NotificationsController(AppDbContext context)
     {
-        if (page is < 1 or > 100000 || pageSize is < 1 or > 100) throw new BusinessException(400, "Phân trang không hợp lệ.");
-        var actorId = ActorId();
-        var query = db.Notifications.AsNoTracking().Where(n => n.UserId == actorId && (!unreadOnly || !n.IsRead));
-        return Success(new { items = await query.OrderByDescending(n => n.SentAt).ThenByDescending(n => n.Id)
-            .Skip((page - 1) * pageSize).Take(pageSize).Select(n => new { n.Id, n.Title, n.Content, n.IsRead, n.SentAt }).ToListAsync(ct),
-            total = await query.CountAsync(ct), page, pageSize });
+        _context = context;
     }
-    [HttpPatch("{id:int}/read")]
-    public async Task<IActionResult> MarkRead(int id, CancellationToken ct)
+
+    // 1. Xem thông báo của tài khoản đang đăng nhập.
+    // GET /api/notifications?page=1&pageSize=20
+    // Thêm unreadOnly=true để chỉ lấy thông báo chưa đọc.
+    [HttpGet]
+    public async Task<IActionResult> Get(
+        CancellationToken cancellationToken,
+        [FromQuery] bool unreadOnly = false,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
     {
-        var actorId = ActorId();
-        var notification = await db.Notifications.SingleOrDefaultAsync(n => n.Id == id && n.UserId == actorId, ct)
-            ?? throw new BusinessException(404, "Không tìm thấy thông báo của bạn.");
+        // Kiểm tra thông tin phân trang.
+        if (page < 1 || page > 100000 ||
+            pageSize < 1 || pageSize > 100)
+        {
+            throw new BusinessException(
+                StatusCodes.Status400BadRequest,
+                "Trang phải từ 1 đến 100000, số thông báo mỗi trang từ 1 đến 100.");
+        }
+
+        var userId = ActorId();
+
+        // Chỉ lấy thông báo của người đang đăng nhập.
+        var query = _context.Notifications
+            .AsNoTracking()
+            .Where(notification => notification.UserId == userId);
+
+        // Nếu được yêu cầu, chỉ lấy thông báo chưa đọc.
+        if (unreadOnly)
+        {
+            query = query.Where(notification => !notification.IsRead);
+        }
+
+        // Sắp xếp mới nhất trước, sau đó lấy trang được yêu cầu.
+        var notifications = await query
+            .OrderByDescending(notification => notification.SentAt)
+            .ThenByDescending(notification => notification.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(notification => new
+            {
+                notification.Id,
+                notification.Title,
+                notification.Content,
+                notification.IsRead,
+                notification.SentAt
+            })
+            .ToListAsync(cancellationToken);
+
+        // Tổng số thông báo thỏa bộ lọc, tính trên tất cả các trang.
+        var total = await query.CountAsync(cancellationToken);
+
+        return Success(new
+        {
+            items = notifications,
+            total,
+            page,
+            pageSize
+        });
+    }
+
+    // 2. Đánh dấu một thông báo là đã đọc.
+    // PATCH /api/notifications/5/read
+    [HttpPatch("{id:int}/read")]
+    public async Task<IActionResult> MarkRead(
+        [FromRoute] int id,
+        CancellationToken cancellationToken)
+    {
+        var userId = ActorId();
+
+        // Chỉ được cập nhật thông báo thuộc tài khoản của mình.
+        var notification = await _context.Notifications
+            .SingleOrDefaultAsync(
+                notification =>
+                    notification.Id == id &&
+                    notification.UserId == userId,
+                cancellationToken);
+
+        if (notification == null)
+        {
+            throw new BusinessException(
+                StatusCodes.Status404NotFound,
+                "Không tìm thấy thông báo của bạn.");
+        }
+
         notification.IsRead = true;
-        await db.SaveChangesAsync(ct);
+
+        await _context.SaveChangesAsync(cancellationToken);
+
         return NoContent();
     }
 }

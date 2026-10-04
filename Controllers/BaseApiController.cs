@@ -5,7 +5,7 @@ using SportsCenterAPI.Helpers;
 
 namespace SportsCenterAPI.Controllers;
 
-public abstract class Flow2ControllerBase : ControllerBase
+public abstract class BaseApiController : ControllerBase
 {
     protected int ActorId() => int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id)
         ? id : throw new BusinessException(401, "Vui lòng đăng nhập.");
