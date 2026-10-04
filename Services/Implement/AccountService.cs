@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using SportsCenterAPI.Data;
+using SportsCenterAPI.DTOs.Accounts;
 using SportsCenterAPI.Helpers;
 using SportsCenterAPI.Models;
-using SportsCenterAPI.Models.DTOs.Accounts;
 using SportsCenterAPI.Services.Interface;
 
 namespace SportsCenterAPI.Services.Implement;

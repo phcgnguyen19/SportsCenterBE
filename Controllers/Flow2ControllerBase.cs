@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
+using SportsCenterAPI.DTOs.Response;
 using SportsCenterAPI.Helpers;
-using SportsCenterAPI.Models.DTOs.Response;
 
 namespace SportsCenterAPI.Controllers;
 

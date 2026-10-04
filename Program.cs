@@ -8,6 +8,7 @@ using SportsCenterAPI.Middleware;
 using SportsCenterAPI.Models;
 using SportsCenterAPI.Services.Implement;
 using SportsCenterAPI.Services.Interface;
+using SportsCenterAPI.Settings;
 using System.Reflection.Metadata;
 using System.Security.Claims;
 using System.Text;
@@ -146,6 +147,20 @@ builder.Services.AddScoped<IMembershipPackageService, MembershipPackageService>(
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<IClassService, ClassService>();
+builder.Services.Configure<MailSettings>(
+    builder.Configuration.GetSection("MailSettings"));
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<IClassCatalogService, ClassCatalogService>();
+// Đọc cấu hình từ mục "PayOS" trong appsettings.json.
+builder.Services.Configure<PayOSConfig>(
+    builder.Configuration.GetSection("PayOS"));
+
+// Gọi API của payOS.
+builder.Services.AddScoped<IPayOSService, PayOSService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
+
+
 
 var app = builder.Build();
 
@@ -175,11 +190,11 @@ app.UseAuthorization();
 app.MapControllers();
 
 // Auto-migrate database on startup (development only)
-//using (var scope = app.Services.CreateScope())
-//{
-//    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-//    db.Database.Migrate();
-//}
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.Migrate();
+}
 
 
 app.Run();

@@ -21,6 +21,7 @@ namespace SportsCenterAPI.Data
         /// Accounts / Tài khoản người dùng (Admin, Manager, Coach, Member)
         /// </summary>
         public DbSet<User> Users { get; set; } = null!;
+        public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
 
         /// <summary>
         /// Member profiles / Hồ sơ hội viên
@@ -104,6 +105,18 @@ namespace SportsCenterAPI.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            modelBuilder.HasSequence<long>("PayOSOrderNumbers", "dbo")
+    .StartsAt(1)
+    .IncrementsBy(1);
+
+            modelBuilder.Entity<Payment>()
+                .Property(p => p.AmountReceived)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<Payment>()
+                .HasIndex(p => p.PayOSOrderCode)
+                .IsUnique()
+                .HasFilter("[PayOSOrderCode] IS NOT NULL");
 
             #region 1. Unique Indexes / Chỉ mục duy nhất
             // Ensure User Email is unique across the system

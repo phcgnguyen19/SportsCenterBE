@@ -22,6 +22,8 @@ namespace SportsCenterAPI.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.HasSequence("PayOSOrderNumbers", "dbo");
+
             modelBuilder.Entity("SportsCenterAPI.Models.Attendance", b =>
                 {
                     b.Property<int>("Id")
@@ -504,8 +506,45 @@ namespace SportsCenterAPI.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<decimal>("AmountReceived")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("CancelUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CheckoutUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("GatewayStatus")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("GatewayTransactionReference")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("MemberId")
                         .HasColumnType("int");
+
+                    b.Property<string>("MemberNameSnapshot")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PackageNameSnapshot")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long?>("PayOSOrderCode")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("PayOSPaymentLinkId")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("PaymentDate")
                         .HasColumnType("datetime2");
@@ -513,6 +552,21 @@ namespace SportsCenterAPI.Migrations
                     b.Property<string>("PaymentMethod")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("QrCode")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ReturnUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ReviewReason")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -527,7 +581,13 @@ namespace SportsCenterAPI.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CreatedByUserId");
+
                     b.HasIndex("MemberId");
+
+                    b.HasIndex("PayOSOrderCode")
+                        .IsUnique()
+                        .HasFilter("[PayOSOrderCode] IS NOT NULL");
 
                     b.HasIndex("SubscriptionId")
                         .IsUnique()
@@ -538,6 +598,47 @@ namespace SportsCenterAPI.Migrations
                         .HasFilter("[TransactionReference] IS NOT NULL");
 
                     b.ToTable("Payments");
+                });
+
+            modelBuilder.Entity("SportsCenterAPI.Models.RefreshToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRevoked")
+                        .HasColumnType("bit");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("RefreshTokens");
                 });
 
             modelBuilder.Entity("SportsCenterAPI.Models.Sport", b =>
@@ -911,6 +1012,11 @@ namespace SportsCenterAPI.Migrations
 
             modelBuilder.Entity("SportsCenterAPI.Models.Payment", b =>
                 {
+                    b.HasOne("SportsCenterAPI.Models.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("SportsCenterAPI.Models.Member", "Member")
                         .WithMany("Payments")
                         .HasForeignKey("MemberId")
@@ -922,9 +1028,22 @@ namespace SportsCenterAPI.Migrations
                         .HasForeignKey("SubscriptionId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.Navigation("CreatedByUser");
+
                     b.Navigation("Member");
 
                     b.Navigation("Subscription");
+                });
+
+            modelBuilder.Entity("SportsCenterAPI.Models.RefreshToken", b =>
+                {
+                    b.HasOne("SportsCenterAPI.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("SportsCenterAPI.Models.SportClass", b =>

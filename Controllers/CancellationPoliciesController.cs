@@ -1,8 +1,10 @@
+﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SportsCenterAPI.DTOs.Classes;
+using SportsCenterAPI.DTOs.Response;
+using SportsCenterAPI.Helpers;
 using SportsCenterAPI.Models;
-using SportsCenterAPI.Models.DTOs.Classes;
-using SportsCenterAPI.Models.DTOs.Response;
 using SportsCenterAPI.Services.Interface;
 
 namespace SportsCenterAPI.Controllers;
@@ -10,66 +12,67 @@ namespace SportsCenterAPI.Controllers;
 [ApiController]
 [Route("api/cancellation-policies")]
 [Authorize(Roles = "Manager")]
-public class CancellationPoliciesController(IClassService classService) : Flow2ControllerBase
+public class CancellationPoliciesController(IClassService service)
+    : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(
-        typeof(ApiResponse<List<CancellationPolicy>>),StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse<object>),StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(typeof(ApiResponse<object>),StatusCodes.Status403Forbidden)]
-    public async Task<ActionResult<ApiResponse<List<CancellationPolicy>>>> Get(
+        typeof(ApiResponse<List<CancellationPolicy>>),
+        StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<ApiResponse<List<CancellationPolicy>>>> GetPolicies(
         CancellationToken ct)
     {
-        var policies = await classService.GetPoliciesAsync(ActorId(), ct);
+        var policies = await service.GetPoliciesAsync(GetActorId(), ct);
 
-        return Ok(
-            ApiResponse<List<CancellationPolicy>>.Ok(
-                policies,
-                "Cancellation policies retrieved successfully"));
+        return Ok(ApiResponse<List<CancellationPolicy>>.Ok(
+            policies,
+
+            "Lấy danh sách chính sách hủy thành công."));
+
     }
 
     [HttpPost]
-    [ProducesResponseType( typeof(ApiResponse<CancellationPolicy>),StatusCodes.Status201Created)]
-    [ProducesResponseType(typeof(ApiResponse<object>),StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ApiResponse<object>),StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(typeof(ApiResponse<object>),StatusCodes.Status403Forbidden)]
-    public async Task<ActionResult<ApiResponse<CancellationPolicy>>> Create(
+    public async Task<IActionResult> CreatePolicy(
         PolicyRequest request,
         CancellationToken ct)
     {
-        var policy = await classService.SavePolicyAsync(
-            ActorId(),
-            null,
-            request,
-            ct);
+        var policy = await service.SavePolicyAsync(
+            GetActorId(), null, request, ct);
 
-        return StatusCode(
-            StatusCodes.Status201Created,
-            ApiResponse<CancellationPolicy>.CreatedAt(
-                policy,
-                "Cancellation policy created successfully"));
+        return Ok(ApiResponse<CancellationPolicy>.Ok(
+            policy,
+
+
+            "Tạo chính sách hủy thành công."));
     }
 
     [HttpPut("{id:int}")]
-    [ProducesResponseType(typeof(ApiResponse<CancellationPolicy>),StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse<object>),StatusCodes.Status400BadRequest)]
-    [ProducesResponseType( typeof(ApiResponse<object>),StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(typeof(ApiResponse<object>),StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<ApiResponse<CancellationPolicy>>> Update(
-        int id,
-        PolicyRequest request,
-        CancellationToken ct)
+    public async Task<IActionResult> UpdatePolicy(int id,PolicyRequest request,CancellationToken ct)
     {
-        var policy = await classService.SavePolicyAsync(
-            ActorId(),
-            id,
-            request,
-            ct);
+        var policy = await service.SavePolicyAsync(
+            GetActorId(), id, request, ct);
 
-        return Ok(
-            ApiResponse<CancellationPolicy>.Ok(
-                policy,
-                "Cancellation policy updated successfully"));
+        return Ok(ApiResponse<CancellationPolicy>.Ok(
+            policy,
+
+
+            "Cập nhật chính sách hủy thành công."));
+
+    }
+
+    private int GetActorId()
+    {
+        var value = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!int.TryParse(value, out var actorId))
+        {
+
+
+            throw new BusinessException(401, "Vui lòng đăng nhập.");
+        }
+
+        return actorId;
     }
 }

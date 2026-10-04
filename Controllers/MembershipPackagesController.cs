@@ -1,9 +1,9 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SportsCenterAPI.DTOs.MembershipPackages;
+using SportsCenterAPI.DTOs.Response;
 using SportsCenterAPI.Helpers;
-using SportsCenterAPI.Models.DTOs.MembershipPackages;
-using SportsCenterAPI.Models.DTOs.Response;
 using SportsCenterAPI.Services.Interface;
 
 namespace SportsCenterAPI.Controllers;

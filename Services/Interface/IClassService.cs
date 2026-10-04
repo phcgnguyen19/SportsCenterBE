@@ -1,5 +1,5 @@
+using SportsCenterAPI.DTOs.Classes;
 using SportsCenterAPI.Models;
-using SportsCenterAPI.Models.DTOs.Classes;
 
 namespace SportsCenterAPI.Services.Interface;
 
