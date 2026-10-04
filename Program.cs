@@ -152,6 +152,14 @@ builder.Services.Configure<MailSettings>(
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<IClassCatalogService, ClassCatalogService>();
+// Đọc cấu hình từ mục "PayOS" trong appsettings.json.
+builder.Services.Configure<PayOSConfig>(
+    builder.Configuration.GetSection("PayOS"));
+
+// Gọi API của payOS.
+builder.Services.AddScoped<IPayOSService, PayOSService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
+
 
 
 var app = builder.Build();
