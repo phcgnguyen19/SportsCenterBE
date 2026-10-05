@@ -1,0 +1,35 @@
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using SportsCenterAPI.Services.Interface;
+using SportsCenterAPI.Helpers;
+
+namespace SportsCenterAPI.Controllers;
+
+[Route("api/[controller]")]
+[ApiController]
+[Authorize(Roles = UserRoles.Manager)] // Chỉ cho phép Manager mới được xem báo cáo
+public class  ReportsController(IReportService reportService) : ControllerBase
+{
+    [HttpGet("overview")]
+    public async Task<IActionResult> GetOverview()
+    {
+        var result = await reportService.GetOverviewAsync();
+        return Ok(new { success = true, data = result });
+    }
+
+    [HttpGet("revenue")]
+    public async Task<IActionResult> GetRevenue([FromQuery] int? year)
+    {
+        int targetYear = year ?? DateTime.UtcNow.Year; // Nếu không có năm được cung cấp, sử dụng năm hiện tại
+        var result = await reportService.GetRevenueOverTimeAsync(targetYear);
+        return Ok(new { success = true, year = targetYear, data = result });
+    }
+
+    [HttpGet("class-status")]
+    public async Task<IActionResult> GetClassStatus()
+    {
+        var result = await reportService.GetClassRegistrationStatusAsync();
+        return Ok(new { success = true, data = result });
+    }
+}
+
