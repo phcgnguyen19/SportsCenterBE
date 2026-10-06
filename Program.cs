@@ -153,6 +153,8 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<IClassCatalogService, ClassCatalogService>();
 builder.Services.AddScoped<ITrainingPlanService, TrainingPlanService>();
+builder.Services.AddScoped<IReportService, ReportService>();
+
 
 // Đọc cấu hình từ mục "PayOS" trong appsettings.json.
 builder.Services.Configure<PayOSConfig>(
@@ -162,7 +164,8 @@ builder.Configuration.GetSection("PayOS"));
 builder.Services.AddScoped<IPayOSService, PayOSService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 
-
+// Attendance Service
+builder.Services.AddScoped<IAttendanceService, AttendanceService>();
 
 var app = builder.Build();
 
@@ -191,11 +194,19 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// Auto-migrate database on startup (development only)
+//// Auto-migrate database on startup (development only)
+//using (var scope = app.Services.CreateScope())
+//{
+//    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+//    db.Database.Migrate();
+//}
+
+// Tự động chạy Migration và nạp dữ liệu mẫu
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var db = scope.ServiceProvider.GetRequiredService<SportsCenterAPI.Data.AppDbContext>();
     db.Database.Migrate();
+    await SportsCenterAPI.Data.DbSeeder.SeedAsync(db);
 }
 
 
