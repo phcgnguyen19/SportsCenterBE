@@ -159,6 +159,7 @@ builder.Services.Configure<PayOSConfig>(
 // Gọi API của payOS.
 builder.Services.AddScoped<IPayOSService, PayOSService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IProfileService, ProfileService>();
 
 
 
