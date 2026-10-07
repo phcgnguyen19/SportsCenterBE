@@ -12,52 +12,107 @@ namespace SportsCenterAPI.Controllers;
 [ApiController]
 [Route("api/members")]
 [Authorize]
-public class MembersController(IAccountService accountService, IAuthService authService) : ControllerBase
+public class MembersController : ControllerBase
 {
-    /// <summary>Register a walk-in member. The member supplies their initial password; no JWT is returned to staff.</summary>
-    [HttpPost]
-    [Authorize(Roles = UserRoles.FrontDesk)]
-    [ProducesResponseType(typeof(ApiResponse<MemberResponseDTO>), StatusCodes.Status201Created)]
-    public async Task<ActionResult<ApiResponse<MemberResponseDTO>>> RegisterAtDesk(RegisterRequestDTO request)
+    private readonly IAccountService _accountService;
+    private readonly IAuthService _authService;
+
+    public MembersController(
+        IAccountService accountService,
+        IAuthService authService)
     {
-        var member = await authService.RegisterAtDeskAsync(request);
-        return CreatedAtAction(nameof(GetById), new { id = member.MemberId },
-            ApiResponse<MemberResponseDTO>.CreatedAt(member, "Member registered successfully"));
+        _accountService = accountService;
+        _authService = authService;
     }
 
+    // Lễ tân hoặc quản lý đăng ký hội viên tại quầy.
+    [HttpPost]
+    [Authorize(Roles = UserRoles.FrontDesk)]
+    [ProducesResponseType(
+        typeof(ApiResponse<MemberResponseDTO>),
+        StatusCodes.Status201Created)]
+    public async Task<ActionResult<ApiResponse<MemberResponseDTO>>> RegisterAtDesk(
+        [FromBody] RegisterRequestDTO request)
+    {
+        var member = await _authService.RegisterAtDeskAsync(request);
+
+        return CreatedAtAction(
+            nameof(GetById),
+            new { id = member.MemberId },
+            ApiResponse<MemberResponseDTO>.CreatedAt(
+                member,
+                "Đăng ký hội viên thành công."));
+    }
+
+    // Lấy danh sách hội viên.
     [HttpGet]
     [Authorize(Roles = UserRoles.FrontDesk)]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<MemberResponseDTO>>>> GetAll()
     {
-        var members = await accountService.GetMembersAsync();
-        return Ok(ApiResponse<IReadOnlyList<MemberResponseDTO>>.Ok(members, "Members retrieved"));
+        var members = await _accountService.GetMembersAsync();
+
+        return Ok(
+            ApiResponse<IReadOnlyList<MemberResponseDTO>>.Ok(
+                members,
+                "Lấy danh sách hội viên thành công."));
     }
 
+    // Lấy thông tin hội viên theo ID.
     [HttpGet("{id:int}")]
     [Authorize(Roles = UserRoles.FrontDesk)]
-    public async Task<ActionResult<ApiResponse<MemberResponseDTO>>> GetById(int id)
+    public async Task<ActionResult<ApiResponse<MemberResponseDTO>>> GetById(
+        int id)
     {
-        var member = await accountService.GetMemberAsync(id);
-        return Ok(ApiResponse<MemberResponseDTO>.Ok(member, "Member retrieved"));
+        var member = await _accountService.GetMemberAsync(id);
+
+        return Ok(
+            ApiResponse<MemberResponseDTO>.Ok(
+                member,
+                "Lấy thông tin hội viên thành công."));
     }
 
+    // Hội viên xem hồ sơ của chính mình.
     [HttpGet("me")]
     [Authorize(Roles = UserRoles.Member)]
     public async Task<ActionResult<ApiResponse<MemberResponseDTO>>> GetMe()
     {
-        var member = await accountService.GetMyMemberAsync(GetCurrentUserId());
-        return Ok(ApiResponse<MemberResponseDTO>.Ok(member, "Member profile retrieved"));
+        var userId = GetCurrentUserId();
+
+        var member = await _accountService.GetMyMemberAsync(userId);
+
+        return Ok(
+            ApiResponse<MemberResponseDTO>.Ok(
+                member,
+                "Lấy hồ sơ hội viên thành công."));
     }
 
+    // Quản lý vô hiệu hóa hội viên.
     [HttpDelete("{id:int}")]
     [Authorize(Roles = UserRoles.Manager)]
     public async Task<IActionResult> Deactivate(int id)
     {
-        await accountService.DeactivateMemberAsync(id);
+        var callerUserId = GetCurrentUserId();
+
+        await _accountService.DeactivateMemberAsync(
+            id,
+            callerUserId);
+
         return NoContent();
     }
 
-    private int GetCurrentUserId() =>
-        int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id)
-            ? id : throw new UnauthorizedAccessException("Invalid user identity.");
+    // Lấy ID tài khoản đang đăng nhập từ JWT.
+    private int GetCurrentUserId()
+    {
+        var value = User.FindFirstValue(
+            ClaimTypes.NameIdentifier);
+
+        if (!int.TryParse(value, out var userId) || userId <= 0)
+        {
+            throw new BusinessException(
+                401,
+                "Thông tin đăng nhập không hợp lệ.");
+        }
+
+        return userId;
+    }
 }
