@@ -163,6 +163,7 @@ builder.Configuration.GetSection("PayOS"));
 // Gọi API của payOS.
 builder.Services.AddScoped<IPayOSService, PayOSService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IProfileService, ProfileService>();
 
 // Attendance Service
 builder.Services.AddScoped<IAttendanceService, AttendanceService>();
