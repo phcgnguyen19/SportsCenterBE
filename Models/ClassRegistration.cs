@@ -24,7 +24,5 @@ namespace SportsCenterAPI.Models
         public DateTime? CancellationDeadline { get; set; }
         [System.ComponentModel.DataAnnotations.MaxLength(500)]
         public string? CancellationReason { get; set; }
-        [System.ComponentModel.DataAnnotations.Timestamp]
-        public byte[] RowVersion { get; set; } = [];
     }
 }

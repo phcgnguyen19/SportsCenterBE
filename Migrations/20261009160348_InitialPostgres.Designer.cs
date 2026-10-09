@@ -12,7 +12,7 @@ using SportsCenterAPI.Data;
 namespace SportsCenterAPI.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261008222050_InitialPostgres")]
+    [Migration("20261009160348_InitialPostgres")]
     partial class InitialPostgres
     {
         /// <inheritdoc />
@@ -168,12 +168,6 @@ namespace SportsCenterAPI.Migrations
                     b.Property<DateTime>("RegistrationDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("bytea");
-
                     b.Property<int?>("SessionId")
                         .HasColumnType("integer");
 
@@ -261,12 +255,6 @@ namespace SportsCenterAPI.Migrations
 
                     b.Property<DateTime>("EndsAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("bytea");
 
                     b.Property<DateTime>("StartsAt")
                         .HasColumnType("timestamp with time zone");
@@ -411,12 +399,6 @@ namespace SportsCenterAPI.Migrations
 
                     b.Property<int>("PackageId")
                         .HasColumnType("integer");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("bytea");
 
                     b.Property<DateTime?>("StartDate")
                         .HasColumnType("timestamp with time zone");
@@ -565,12 +547,6 @@ namespace SportsCenterAPI.Migrations
                     b.Property<string>("ReviewReason")
                         .HasColumnType("text");
 
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("bytea");
-
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("text");
@@ -619,12 +595,6 @@ namespace SportsCenterAPI.Migrations
 
                     b.Property<bool>("IsRevoked")
                         .HasColumnType("boolean");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("bytea");
 
                     b.Property<string>("TokenHash")
                         .IsRequired()

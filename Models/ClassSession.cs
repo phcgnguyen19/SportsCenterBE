@@ -16,7 +16,6 @@ public class ClassSession
     public int Capacity { get; set; }
     [MaxLength(20)] public string Status { get; set; } = "Scheduled";
     [MaxLength(500)] public string? CancellationReason { get; set; }
-    [Timestamp] public byte[] RowVersion { get; set; } = [];
     public ICollection<ClassRegistration> Registrations { get; set; } = new List<ClassRegistration>();
     public ICollection<Attendance> Attendances { get; set; } = new List<Attendance>();
 }

@@ -17,9 +17,5 @@ public class RefreshToken
     public DateTime ExpiresAt { get; set; }
     public bool IsRevoked { get; set; }
 
-    // SQL Server rejects a refresh if another request already rotated/revoked it.
-    [Timestamp]
-    public byte[] RowVersion { get; set; } = null!;
-
     public User User { get; set; } = null!;
 }
