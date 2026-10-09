@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Data;
 using System.Linq.Expressions;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using Microsoft.EntityFrameworkCore;
 using SportsCenterAPI.Data;
 using SportsCenterAPI.DTOs.Classes;
@@ -83,7 +83,7 @@ public partial class ClassService(AppDbContext db, TimeProvider clock) : IClassS
     private static bool SqlConflict(Exception ex)
     {
         for (Exception? current = ex; current != null; current = current.InnerException)
-            if (current is SqlException sql && sql.Number is 1205 or 2601 or 2627) return true;
+            if (current is PostgresException pg && pg.SqlState is "23505" or "40001") return true;
         return false;
     }
     private static readonly Expression<Func<SportClass, ClassDTO>> ClassProjection = c => new(

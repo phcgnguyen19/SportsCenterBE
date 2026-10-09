@@ -2,7 +2,7 @@ using System.Net;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using Microsoft.EntityFrameworkCore;
 using SportsCenterAPI.Helpers;
 
@@ -63,7 +63,7 @@ namespace SportsCenterAPI.Middleware
             {
                 BusinessException business => business.StatusCode,
                 DbUpdateConcurrencyException => StatusCodes.Status409Conflict,
-                DbUpdateException { InnerException: SqlException { Number: 2601 or 2627 } } => StatusCodes.Status409Conflict,
+                DbUpdateException { InnerException: PostgresException { SqlState: "23505" } } => StatusCodes.Status409Conflict,
                 KeyNotFoundException => (int)HttpStatusCode.NotFound, // 404
                 UnauthorizedAccessException => (int)HttpStatusCode.Unauthorized, // 401
                 ArgumentNullException or ArgumentException or InvalidOperationException => (int)HttpStatusCode.BadRequest, // 400

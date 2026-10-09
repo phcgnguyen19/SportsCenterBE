@@ -1,5 +1,5 @@
 using System.Data;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using Microsoft.EntityFrameworkCore;
 using SportsCenterAPI.Data;
 using SportsCenterAPI.DTOs.Subscriptions;
@@ -252,8 +252,7 @@ public class SubscriptionService(AppDbContext context) : ISubscriptionService
     {
         for (Exception? current = exception; current != null; current = current.InnerException)
         {
-            if (current is SqlException sql && sql.Number is 1205 or 2601 or 2627)
-                return true;
+            if (current is PostgresException pg && pg.SqlState is "23505" or "40001") return true;
         }
         return false;
     }
