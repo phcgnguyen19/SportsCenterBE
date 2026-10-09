@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Data;
 using System.Linq.Expressions;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using Microsoft.EntityFrameworkCore;
 using SportsCenterAPI.Data;
 using SportsCenterAPI.DTOs.Classes;
@@ -293,6 +293,10 @@ public partial class ClassService : IClassService
     // Nhận diện lỗi tranh chấp dữ liệu hoặc trùng khóa SQL Server.
     private static bool SqlConflict(Exception ex)
     {
+
+        for (Exception? current = ex; current != null; current = current.InnerException)
+            if (current is PostgresException pg && pg.SqlState is "23505" or "40001") return true;
+
         Exception? current = ex;
 
         while (current != null)
@@ -312,7 +316,6 @@ public partial class ClassService : IClassService
 
             current = current.InnerException;
         }
-
         return false;
     }
 

@@ -1,5 +1,5 @@
 using System.Data;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using Microsoft.EntityFrameworkCore;
 using SportsCenterAPI.Data;
 using SportsCenterAPI.DTOs.Subscriptions;
@@ -584,6 +584,9 @@ public class SubscriptionService : ISubscriptionService
 
         while (current != null)
         {
+
+            if (current is PostgresException pg && pg.SqlState is "23505" or "40001") return true;
+
             if (current is SqlException sql)
             {
                 if (sql.Number == 1205 ||
@@ -595,6 +598,7 @@ public class SubscriptionService : ISubscriptionService
             }
 
             current = current.InnerException;
+
         }
 
         return false;
