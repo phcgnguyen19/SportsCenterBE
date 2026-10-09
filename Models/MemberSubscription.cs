@@ -21,9 +21,6 @@ namespace SportsCenterAPI.Models
         public DateTime? EndDate { get; set; }
         public string Status { get; set; } = "Pending"; // Pending, Active, Expired, Cancelled
 
-        [Timestamp]
-        public byte[] RowVersion { get; set; } = [];
-
         // Navigation properties
         public ICollection<Payment> Payments { get; set; } = new List<Payment>();
     }

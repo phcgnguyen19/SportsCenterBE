@@ -65,8 +65,4 @@ public class Payment
 
     // Lý do giao dịch cần kiểm tra thủ công
     public string? ReviewReason { get; set; }
-
-    // Kiểm soát cập nhật đồng thời
-    [Timestamp]
-    public byte[] RowVersion { get; set; } = [];
 }
