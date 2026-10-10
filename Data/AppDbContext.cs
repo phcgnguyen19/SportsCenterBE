@@ -29,6 +29,7 @@ namespace SportsCenterAPI.Data
         public DbSet<ClassSession> ClassSessions { get; set; } = null!;
         public DbSet<CancellationPolicy> CancellationPolicies { get; set; } = null!;
         public DbSet<ClassReview> ClassReviews { get; set; } = null!;
+        public DbSet<SupportTicket> SupportTickets { get; set; } = null!;
         #endregion
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -111,6 +112,11 @@ namespace SportsCenterAPI.Data
             modelBuilder.Entity<Payment>()
                 .HasIndex(payment => payment.TransactionReference).IsUnique()
                 .HasFilter("\"TransactionReference\" IS NOT NULL"); // Đã sửa [] thành ""
+
+            modelBuilder.Entity<SupportTicket>()
+            .HasOne(t => t.Member).WithMany().HasForeignKey(t => t.MemberId).OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<SupportTicket>()
+                .HasOne(t => t.HandledByUser).WithMany().HasForeignKey(t => t.HandledByUserId).OnDelete(DeleteBehavior.Restrict);
             #endregion
 
             #region 2. Decimal Precision Configurations

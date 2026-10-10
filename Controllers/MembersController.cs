@@ -93,9 +93,7 @@ public class MembersController : ControllerBase
     {
         var callerUserId = GetCurrentUserId();
 
-        await _accountService.DeactivateMemberAsync(
-            id,
-            callerUserId);
+        await _accountService.DeactivateMemberAsync(id);
 
         return NoContent();
     }
