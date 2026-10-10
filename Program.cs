@@ -173,6 +173,8 @@ builder.Services.AddScoped<ISupportTicketService, SupportTicketService>();
 
 var app = builder.Build();
 
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+
 // === Configure Middleware Pipeline ===
 
 // Global exception handler

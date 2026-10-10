@@ -295,7 +295,6 @@ public partial class ClassService : IClassService
     {
         for (Exception? current = ex; current != null; current = current.InnerException)
             if (current is PostgresException pg && pg.SqlState is "23505" or "40001") return true;
-
         return false;
     }
 
