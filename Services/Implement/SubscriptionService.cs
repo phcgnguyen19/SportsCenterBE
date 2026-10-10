@@ -578,28 +578,10 @@ public class SubscriptionService : ISubscriptionService
         }
     }
 
-    private static bool IsSqlConcurrencyConflict(Exception exception)
+    private static bool IsSqlConcurrencyConflict(Exception ex)
     {
-        Exception? current = exception;
-
-        while (current != null)
-        {
-
+        for (Exception? current = ex; current != null; current = current.InnerException)
             if (current is PostgresException pg && pg.SqlState is "23505" or "40001") return true;
-
-            if (current is SqlException sql)
-            {
-                if (sql.Number == 1205 ||
-                    sql.Number == 2601 ||
-                    sql.Number == 2627)
-                {
-                    return true;
-                }
-            }
-
-            current = current.InnerException;
-
-        }
 
         return false;
     }

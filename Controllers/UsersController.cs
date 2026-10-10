@@ -55,9 +55,7 @@ public class UsersController : ControllerBase
     {
         var callerUserId = GetCurrentUserId();
 
-        var staff = await _accountService.CreateStaffAsync(
-            request,
-            callerUserId);
+        var staff = await _accountService.CreateStaffAsync(request);
 
         return CreatedAtAction(
             nameof(GetById),
