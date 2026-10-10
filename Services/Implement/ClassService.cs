@@ -293,29 +293,8 @@ public partial class ClassService : IClassService
     // Nhận diện lỗi tranh chấp dữ liệu hoặc trùng khóa SQL Server.
     private static bool SqlConflict(Exception ex)
     {
-
         for (Exception? current = ex; current != null; current = current.InnerException)
             if (current is PostgresException pg && pg.SqlState is "23505" or "40001") return true;
-
-        Exception? current = ex;
-
-        while (current != null)
-        {
-            if (current is SqlException sql)
-            {
-                var isConflict =
-                    sql.Number == 1205 ||
-                    sql.Number == 2601 ||
-                    sql.Number == 2627;
-
-                if (isConflict)
-                {
-                    return true;
-                }
-            }
-
-            current = current.InnerException;
-        }
         return false;
     }
 
