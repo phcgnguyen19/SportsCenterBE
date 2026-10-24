@@ -1,5 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SportsCenterAPI.Data;
+using System.Data;
+using Npgsql;
+using SportsCenterAPI.Helpers;
 using SportsCenterAPI.DTOs.Rooms;
 using SportsCenterAPI.Models;
 using SportsCenterAPI.Services.Interface;
@@ -58,39 +61,77 @@ public class RoomService : IRoomService
 
     public async Task<RoomResponse> UpdateRoomAsync(int id, UpdateRoomRequest request)
     {
-        var room = await _context.Rooms.FindAsync(id)
-            ?? throw new KeyNotFoundException("Không tìm thấy phòng tập.");
+        return await Transaction(async () =>
+        {
+            var room = await _context.Rooms.SingleOrDefaultAsync(r => r.Id == id)
+                ?? throw new KeyNotFoundException("Không tìm thấy phòng tập.");
 
-        var duplicateName = await _context.Rooms
-            .AnyAsync(r => r.Id != id && r.Name.ToLower() == request.Name.Trim().ToLower());
-        if (duplicateName)
-            throw new InvalidOperationException($"Tên phòng '{request.Name}' đã được sử dụng bởi phòng khác.");
+            var duplicateName = await _context.Rooms
+                .AnyAsync(r => r.Id != id && r.Name.ToLower() == request.Name.Trim().ToLower());
+            if (duplicateName)
+                throw new InvalidOperationException($"Tên phòng '{request.Name}' đã được sử dụng bởi phòng khác.");
 
-        room.Name = request.Name.Trim();
-        room.RoomType = request.RoomType;
-        room.Capacity = request.Capacity;
-        room.Location = request.Location;
-        room.IsActive = request.IsActive;
+            await EnsureRoomCanChangeAsync(id, request.IsActive, request.Capacity);
 
-        await _context.SaveChangesAsync();
-        return MapToResponse(room);
+            room.Name = request.Name.Trim();
+            room.RoomType = request.RoomType;
+            room.Capacity = request.Capacity;
+            room.Location = request.Location;
+            room.IsActive = request.IsActive;
+
+            return MapToResponse(room);
+        });
     }
 
     public async Task DeleteRoomAsync(int id)
     {
-        var room = await _context.Rooms.FindAsync(id)
-            ?? throw new KeyNotFoundException("Không tìm thấy phòng tập.");
+        await Transaction(async () =>
+        {
+            var room = await _context.Rooms.SingleOrDefaultAsync(r => r.Id == id)
+                ?? throw new KeyNotFoundException("Không tìm thấy phòng tập.");
 
-        // Kiểm tra xem phòng có đang được dùng cho các buổi học trong tương lai không
-        var hasFutureSessions = await _context.ClassSessions
-            .AnyAsync(s => s.RoomId == id && s.StartsAt >= DateTime.UtcNow && s.Status != "Cancelled");
+            await EnsureRoomCanChangeAsync(id, false, room.Capacity);
 
-        if (hasFutureSessions)
-            throw new InvalidOperationException("Không thể xóa hoặc vô hiệu hóa phòng đang có lịch học trong tương lai.");
+            // Giữ dữ liệu phòng để tra cứu lịch sử.
+            room.IsActive = false;
+            return true;
+        });
+    }
 
-        // Soft delete (chuyển sang ngưng hoạt động) để giữ dữ liệu lịch sử
-        room.IsActive = false;
-        await _context.SaveChangesAsync();
+    private async Task EnsureRoomCanChangeAsync(int roomId, bool isActive, int capacity)
+    {
+        var now = DateTime.UtcNow;
+        var sessions = _context.ClassSessions.Where(s =>
+            s.RoomId == roomId && s.Status == "Scheduled" && s.EndsAt > now);
+
+        if (!isActive && await sessions.AnyAsync())
+            throw new BusinessException(409, "Không thể ngừng hoạt động phòng đang có buổi học chưa kết thúc.");
+
+        if (await sessions.AnyAsync(s => s.Capacity > capacity))
+            throw new BusinessException(409, "Sức chứa phòng không thể thấp hơn số chỗ của buổi học chưa kết thúc.");
+    }
+
+    private async Task<T> Transaction<T>(Func<Task<T>> action)
+    {
+        await using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+        try
+        {
+            var result = await action();
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+            return result;
+        }
+        catch (Exception ex) when (SqlConflict(ex))
+        {
+            throw new BusinessException(409, "Dữ liệu vừa thay đổi bởi yêu cầu khác. Vui lòng tải lại và thử lại.");
+        }
+    }
+
+    private static bool SqlConflict(Exception exception)
+    {
+        for (Exception? current = exception; current != null; current = current.InnerException)
+            if (current is PostgresException { SqlState: "40001" or "40P01" }) return true;
+        return exception is DbUpdateConcurrencyException;
     }
 
     // Thuật toán kiểm tra chống trùng lịch học tại cùng 1 phòng
