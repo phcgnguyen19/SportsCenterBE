@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using PayOS.Exceptions;
 using PayOS.Models.Webhooks;
 using QuestPDF.Fluent;
+using QuestPDF.Infrastructure;
 using SportsCenterAPI.Data;
 using SportsCenterAPI.DTOs.Response;
 using SportsCenterAPI.Helpers;
@@ -230,102 +231,113 @@ public class PaymentsController : ControllerBase
         string totalAmount =
             payment.AmountReceived.ToString("N0", culture) + " VNĐ";
 
-        // Database lưu UTC; biên lai hiển thị giờ Việt Nam.
-        var paymentDateUtc = DateTime.SpecifyKind(
-            payment.PaymentDate,
-            DateTimeKind.Utc);
+        // 4. Tạo tài liệu PDF (đen trắng, khổ A4).
+        const string ink = "#000000";
+        const string muted = "#595959";
+        const string line = "#D4D4D4";
 
-        var paymentDateVietnam = new DateTimeOffset(paymentDateUtc)
-            .ToOffset(TimeSpan.FromHours(7));
+        static string VnDate(DateTime utc, string format) =>
+            new DateTimeOffset(DateTime.SpecifyKind(utc, DateTimeKind.Utc))
+                .ToOffset(TimeSpan.FromHours(7))
+                .ToString(format, CultureInfo.InvariantCulture);
 
-        // 4. Tạo tài liệu PDF.
+        var subscription = payment.Subscription;
+        string period = subscription?.StartDate != null && subscription.EndDate != null
+            ? $"{VnDate(subscription.StartDate.Value, "dd/MM/yyyy")} – {VnDate(subscription.EndDate.Value, "dd/MM/yyyy")}"
+            : subscription != null
+                ? $"{subscription.DurationInDays} ngày"
+                : "—";
+
+        string email = payment.Member.User.Email;
+        string phone = string.IsNullOrWhiteSpace(payment.Member.User.PhoneNumber)
+            ? "—"
+            : payment.Member.User.PhoneNumber!;
+
         var document = QuestPDF.Fluent.Document.Create(container =>
         {
             container.Page(page =>
             {
-                page.Size(QuestPDF.Helpers.PageSizes.A5);
-                page.Margin(28);
+                page.Size(QuestPDF.Helpers.PageSizes.A4);
+                page.Margin(40);
                 page.PageColor("#FFFFFF");
+                page.DefaultTextStyle(style => style.FontSize(10).FontColor(ink));
 
-                page.DefaultTextStyle(style =>
-                    style.FontSize(10).FontColor("#243447"));
-
-                // Tên trung tâm và trạng thái.
-                page.Header()
-                    .BorderBottom(3)
-                    .BorderColor("#13A89E")
-                    .PaddingBottom(16)
-                    .Row(row =>
+                page.Header().Column(header =>
+                {
+                    header.Item().Row(row =>
                     {
                         row.RelativeItem().Column(brand =>
                         {
-                            brand.Item()
-                                .Text("SPORTS CENTER")
-                                .FontSize(20).Bold()
-                                .FontColor("#102B3F");
-
-                            brand.Item().PaddingTop(4)
-                                .Text("TẬP LUYỆN HÔM NAY. KHỎE HƠN MỖI NGÀY.")
-                                .FontSize(7).FontColor("#64748B");
+                            brand.Item().Text("SPORTS CENTER")
+                                .FontSize(22).Bold().LetterSpacing(0.08f);
+                            brand.Item().PaddingTop(3)
+                                .Text("Hệ thống quản lý trung tâm thể thao")
+                                .FontSize(9).FontColor(muted);
                         });
 
-                        row.ConstantItem(82)
-                            .AlignRight().AlignMiddle()
-                            .Background("#E5F6EF").Padding(7)
-                            .Text("ĐÃ THANH TOÁN")
-                            .FontSize(8).Bold().FontColor("#18734C");
+                        row.RelativeItem().AlignRight().Column(title =>
+                        {
+                            title.Item().AlignRight().Text("BIÊN LAI THANH TOÁN")
+                                .FontSize(14).Bold();
+                            title.Item().PaddingTop(3).AlignRight()
+                                .Text($"Số: {invoiceCode}")
+                                .FontSize(9).FontColor(muted);
+                        });
                     });
 
-                page.Content().PaddingTop(22).Column(content =>
+                    header.Item().PaddingTop(14).LineHorizontal(2).LineColor(ink);
+                });
+
+                page.Content().PaddingTop(24).Column(content =>
                 {
-                    content.Spacing(16);
-
-                    // Tiêu đề và mã biên lai.
-                    content.Item().Column(title =>
-                    {
-                        title.Item()
-                            .Text("BIÊN LAI THANH TOÁN")
-                            .FontSize(21).Bold().FontColor("#102B3F");
-
-                        title.Item().PaddingTop(5)
-                            .Text(invoiceCode)
-                            .FontSize(9).FontColor("#64748B");
-                    });
+                    content.Spacing(22);
 
                     // Thông tin giao dịch.
-                    content.Item()
-                        .Background("#F3F6F9")
-                        .Padding(13)
-                        .Row(row =>
-                        {
-                            row.RelativeItem().Column(info =>
+                    content.Item().Row(row =>
+                    {
+                        void Meta(string label, string value) =>
+                            row.RelativeItem().Column(c =>
                             {
-                                info.Item().Text("NGÀY THANH TOÁN")
-                                    .FontSize(7).FontColor("#64748B");
-
-                                info.Item().PaddingTop(5)
-                                    .Text($"{paymentDateVietnam:dd/MM/yyyy HH:mm} (UTC+7)")
-                                    .SemiBold();
+                                c.Item().Text(label.ToUpperInvariant())
+                                    .FontSize(7.5f).Bold().FontColor(muted).LetterSpacing(0.06f);
+                                c.Item().PaddingTop(4).Text(value).SemiBold();
                             });
 
-                            row.RelativeItem().Column(info =>
-                            {
-                                info.Item().Text("PHƯƠNG THỨC")
-                                    .FontSize(7).FontColor("#64748B");
+                        Meta("Ngày thanh toán", $"{VnDate(payment.PaymentDate, "dd/MM/yyyy HH:mm")} (UTC+7)");
+                        Meta("Phương thức", paymentMethod);
+                        Meta("Mã giao dịch", $"#{payment.Id}");
 
-                                info.Item().PaddingTop(5)
-                                    .Text(paymentMethod).SemiBold();
-                            });
-                        });
+                        row.ConstantItem(96).AlignRight().AlignMiddle()
+                            .Border(1.5f).BorderColor(ink).PaddingVertical(5).PaddingHorizontal(8)
+                            .AlignCenter().Text("ĐÃ THANH TOÁN")
+                            .FontSize(8).Bold().LetterSpacing(0.06f);
+                    });
 
                     // Thông tin hội viên.
                     content.Item().Column(customer =>
                     {
-                        customer.Item().Text("THÔNG TIN HỘI VIÊN")
-                            .FontSize(8).SemiBold().FontColor("#64748B");
+                        customer.Item().PaddingBottom(6)
+                            .Text("THÔNG TIN HỘI VIÊN")
+                            .FontSize(8).Bold().FontColor(muted).LetterSpacing(0.06f);
 
-                        customer.Item().PaddingTop(6)
-                            .Text(memberName).FontSize(13).SemiBold();
+                        customer.Item().BorderTop(0.75f).BorderColor(line).PaddingTop(10).Row(row =>
+                        {
+                            row.RelativeItem(2).Column(c =>
+                            {
+                                c.Item().Text("Họ và tên").FontSize(8).FontColor(muted);
+                                c.Item().PaddingTop(2).Text(memberName).FontSize(12).Bold();
+                            });
+                            row.RelativeItem(2).Column(c =>
+                            {
+                                c.Item().Text("Email").FontSize(8).FontColor(muted);
+                                c.Item().PaddingTop(2).Text(email);
+                            });
+                            row.RelativeItem(1).Column(c =>
+                            {
+                                c.Item().Text("Điện thoại").FontSize(8).FontColor(muted);
+                                c.Item().PaddingTop(2).Text(phone);
+                            });
+                        });
                     });
 
                     // Bảng dịch vụ.
@@ -333,67 +345,74 @@ public class PaymentsController : ControllerBase
                     {
                         table.ColumnsDefinition(columns =>
                         {
+                            columns.ConstantColumn(34);
+                            columns.RelativeColumn(4);
                             columns.RelativeColumn(3);
-                            columns.RelativeColumn(2);
+                            columns.RelativeColumn(2.5f);
                         });
 
                         table.Header(header =>
                         {
-                            header.Cell()
-                                .Background("#102B3F").Padding(10)
-                                .Text("DỊCH VỤ / GÓI TẬP")
-                                .FontSize(8).SemiBold().FontColor("#FFFFFF");
+                            IContainer Head(IContainer c) =>
+                                c.Background(ink).PaddingVertical(8).PaddingHorizontal(10);
 
-                            header.Cell()
-                                .Background("#102B3F").Padding(10).AlignRight()
-                                .Text("THÀNH TIỀN")
-                                .FontSize(8).SemiBold().FontColor("#FFFFFF");
+                            header.Cell().Element(Head).Text("STT")
+                                .FontSize(8).Bold().FontColor("#FFFFFF");
+                            header.Cell().Element(Head).Text("DỊCH VỤ / GÓI TẬP")
+                                .FontSize(8).Bold().FontColor("#FFFFFF");
+                            header.Cell().Element(Head).Text("THỜI HẠN")
+                                .FontSize(8).Bold().FontColor("#FFFFFF");
+                            header.Cell().Element(Head).AlignRight().Text("THÀNH TIỀN")
+                                .FontSize(8).Bold().FontColor("#FFFFFF");
                         });
 
-                        table.Cell()
-                            .BorderBottom(1).BorderColor("#E2E8F0")
-                            .Padding(10).Text(packageName);
+                        IContainer Body(IContainer c) =>
+                            c.BorderBottom(0.75f).BorderColor(ink).PaddingVertical(12).PaddingHorizontal(10);
 
-                        table.Cell()
-                            .BorderBottom(1).BorderColor("#E2E8F0")
-                            .Padding(10).AlignRight()
-                            .Text(totalAmount).SemiBold();
+                        table.Cell().Element(Body).Text("1");
+                        table.Cell().Element(Body).Text(packageName).SemiBold();
+                        table.Cell().Element(Body).Text(period);
+                        table.Cell().Element(Body).AlignRight().Text(totalAmount).SemiBold();
                     });
 
                     // Tổng tiền.
-                    content.Item()
-                        .Background("#EAF7F5")
-                        .Padding(15)
-                        .Column(total =>
+                    content.Item().AlignRight().Width(250).Column(total =>
+                    {
+                        total.Item().PaddingBottom(8).Row(row =>
                         {
-                            total.Item()
-                                .Text("TỔNG TIỀN ĐÃ THANH TOÁN")
-                                .FontSize(8).SemiBold().FontColor("#28736D");
-
-                            total.Item().PaddingTop(5)
-                                .Text(totalAmount)
-                                .FontSize(25).Bold().FontColor("#102B3F");
+                            row.RelativeItem().Text("Tạm tính").FontColor(muted);
+                            row.AutoItem().Text(totalAmount);
                         });
 
-                    content.Item()
-                        .Text("Vui lòng lưu biên lai để đối chiếu giao dịch khi cần hỗ trợ.")
-                        .FontSize(8).FontColor("#64748B");
+                        total.Item().Border(1.5f).BorderColor(ink).Padding(12).Column(box =>
+                        {
+                            box.Item().Text("TỔNG TIỀN ĐÃ THANH TOÁN")
+                                .FontSize(7.5f).Bold().FontColor(muted).LetterSpacing(0.06f);
+                            box.Item().PaddingTop(4).AlignRight()
+                                .Text(totalAmount).FontSize(20).Bold();
+                        });
+                    });
                 });
 
-                // Chân trang.
-                page.Footer()
-                    .BorderTop(1).BorderColor("#E2E8F0")
-                    .PaddingTop(12)
-                    .Column(footer =>
+                page.Footer().Column(footer =>
+                {
+                    footer.Item().LineHorizontal(0.75f).LineColor(line);
+                    footer.Item().PaddingTop(10).Row(row =>
                     {
-                        footer.Item()
-                            .Text("Cảm ơn bạn đã đồng hành cùng Sports Center!")
-                            .FontSize(9).SemiBold().FontColor("#102B3F");
+                        row.RelativeItem().Column(c =>
+                        {
+                            c.Item().Text("Cảm ơn bạn đã đồng hành cùng Sports Center.")
+                                .FontSize(9).SemiBold();
+                            c.Item().PaddingTop(2)
+                                .Text("Vui lòng lưu biên lai để đối chiếu khi cần hỗ trợ.")
+                                .FontSize(8).FontColor(muted);
+                        });
 
-                        footer.Item().PaddingTop(4)
-                            .Text("Biên lai được tạo từ giao dịch đã hoàn tất.")
-                            .FontSize(7).FontColor("#64748B");
+                        row.AutoItem().AlignBottom()
+                            .Text($"Xuất lúc {VnDate(DateTime.UtcNow, "dd/MM/yyyy HH:mm")}")
+                            .FontSize(8).FontColor(muted);
                     });
+                });
             });
         });
 
