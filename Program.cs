@@ -132,12 +132,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 builder.Services.AddAuthorization();
 
-// CORS (cho Frontend gọi API)
+// CORS (cho Frontend gọi API); đổi danh sách bằng Cors:AllowedOrigins, mặc định cho cả cổng 3000 (Node) và 5173 (Vite)
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    is { Length: > 0 } configured
+    ? configured
+    : ["http://localhost:3000", "http://localhost:5173"];
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:3000") // Node.js frontend port
+        policy.WithOrigins(allowedOrigins)
               .AllowAnyHeader()
               .AllowAnyMethod();
     });

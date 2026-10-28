@@ -124,6 +124,7 @@ Dự án đã có `UserSecretsId`. Khi phát triển local, có thể mở **Man
 - `SecretKey` dùng để ký JWT; giữ ổn định giữa các lần chạy nếu muốn các token đã cấp tiếp tục hợp lệ.
 - SMTP hiện sử dụng `SecureSocketOptions.StartTls`. Với Gmail, sử dụng mật khẩu ứng dụng theo cấu hình tài khoản gửi.
 - `ReturnUrl` và `CancelUrl` trỏ đến trang frontend. Các giá trị trên là ví dụ cho frontend ở cổng `3000`.
+- CORS mặc định cho phép frontend ở `http://localhost:3000` và `http://localhost:5173`. Nếu frontend chạy cổng khác, đặt `Cors__AllowedOrigins__0=<origin>` (và `__1`, ...) trong `.env`; `ReturnUrl`/`CancelUrl` phải cùng cổng với frontend.
 - User Secrets được nạp trong môi trường `Development`. Khi deploy, cấu hình bằng biến môi trường của nền tảng hosting.
 - Không đưa mật khẩu DB, SMTP, JWT secret hoặc khóa payOS thật vào README hay commit mới.
 
