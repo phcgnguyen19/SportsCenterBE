@@ -9,5 +9,7 @@ public interface IGymCheckInService
     Task<MemberQrResponse> GetMyQrCodeAsync(int userId);
     Task<GymCheckInResponse> CheckOutMemberAsync(int checkInId);
     Task<IEnumerable<GymCheckInResponse>> GetTodayCheckInsAsync();
-    Task<IEnumerable<GymCheckInResponse>> GetMyHistoryAsync(int userId);
+    Task<IEnumerable<GymCheckInResponse>> GetCheckInHistoryAsync(GymCheckInFilterRequest filter);
+    Task<IEnumerable<MemberCheckInSummaryDTO>> GetCheckInSummaryByMemberAsync(DateTime? fromDate, DateTime? toDate, string? search);
+    Task<IEnumerable<GymCheckInResponse>> GetMyHistoryAsync(int userId, DateTime? fromDate = null, DateTime? toDate = null);
 }

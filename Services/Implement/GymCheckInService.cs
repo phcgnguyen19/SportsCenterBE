@@ -173,24 +173,133 @@ public class GymCheckInService : IGymCheckInService
         return checkIns.Select(g => MapToResponse(g, g.Member, g.Subscription?.Package.PackageName ?? "Gói tập", g.CheckedByUser?.FullName));
     }
 
-    public async Task<IEnumerable<GymCheckInResponse>> GetMyHistoryAsync(int userId)
+    // Chế độ 1: Xem lịch sử Check-in/Check-out mọi ngày (Quá khứ + Hiện tại) kèm bộ lọc
+    public async Task<IEnumerable<GymCheckInResponse>> GetCheckInHistoryAsync(GymCheckInFilterRequest filter)
+    {
+        var query = _context.GymCheckIns
+            .Include(g => g.Member).ThenInclude(m => m.User)
+            .Include(g => g.Subscription).ThenInclude(s => s!.Package)
+            .Include(g => g.CheckedByUser)
+            .AsQueryable();
+
+        if (filter.FromDate.HasValue)
+        {
+            var fromUtc = DateTime.SpecifyKind(filter.FromDate.Value.Date, DateTimeKind.Utc);
+            query = query.Where(g => g.CheckInTime >= fromUtc);
+        }
+
+        if (filter.ToDate.HasValue)
+        {
+            var toUtcExclusive = DateTime.SpecifyKind(filter.ToDate.Value.Date.AddDays(1), DateTimeKind.Utc);
+            query = query.Where(g => g.CheckInTime < toUtcExclusive);
+        }
+
+        if (filter.MemberId.HasValue && filter.MemberId.Value > 0)
+        {
+            query = query.Where(g => g.MemberId == filter.MemberId.Value);
+        }
+
+        var checkIns = await query
+            .OrderByDescending(g => g.CheckInTime)
+            .ToListAsync();
+
+        var mapped = checkIns.Select(g => MapToResponse(
+            g,
+            g.Member,
+            g.Subscription?.Package.PackageName ?? "Gói tập",
+            g.CheckedByUser?.FullName));
+
+        // Lọc theo từ khóa tìm kiếm (Tên, SĐT, hoặc Mã thẻ SC-MEM-...)
+        if (!string.IsNullOrWhiteSpace(filter.Search))
+        {
+            var keyword = filter.Search.Trim();
+            mapped = mapped.Where(r =>
+                r.MemberName.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
+                r.PhoneNumber.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
+                r.MemberCode.Contains(keyword, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Lọc theo trạng thái (InGym, CheckedOut, ForgotCheckOut)
+        if (!string.IsNullOrWhiteSpace(filter.Status) &&
+            !filter.Status.Equals("All", StringComparison.OrdinalIgnoreCase))
+        {
+            mapped = mapped.Where(r => r.Status.Equals(filter.Status.Trim(), StringComparison.OrdinalIgnoreCase));
+        }
+
+        return mapped.ToList();
+    }
+
+    // Chế độ 2: Gom nhóm thống kê theo Thành viên (Ai đi tập bao nhiêu buổi, tổng thời gian, lần cuối đến phòng)
+    public async Task<IEnumerable<MemberCheckInSummaryDTO>> GetCheckInSummaryByMemberAsync(
+        DateTime? fromDate,
+        DateTime? toDate,
+        string? search)
+    {
+        var list = await GetCheckInHistoryAsync(new GymCheckInFilterRequest
+        {
+            FromDate = fromDate,
+            ToDate = toDate,
+            Search = search
+        });
+
+        var grouped = list
+            .GroupBy(x => x.MemberId)
+            .Select(g =>
+            {
+                var latest = g.OrderByDescending(x => x.CheckInTime).First();
+                return new MemberCheckInSummaryDTO
+                {
+                    MemberId = g.Key,
+                    MemberCode = latest.MemberCode,
+                    MemberName = latest.MemberName,
+                    PhoneNumber = latest.PhoneNumber,
+                    CurrentPackageName = latest.PackageName,
+                    TotalCheckIns = g.Count(),
+                    TotalDurationMinutes = g.Sum(x => x.DurationMinutes ?? 0),
+                    LastCheckInTime = latest.CheckInTime,
+                    IsCurrentlyInGym = g.Any(x => x.Status == "InGym")
+                };
+            })
+            .OrderByDescending(x => x.LastCheckInTime)
+            .ToList();
+
+        return grouped;
+    }
+
+    public async Task<IEnumerable<GymCheckInResponse>> GetMyHistoryAsync(int userId, DateTime? fromDate = null, DateTime? toDate = null)
     {
         var member = await _context.Members.FirstOrDefaultAsync(m => m.UserId == userId);
         if (member == null) return new List<GymCheckInResponse>();
 
-        var checkIns = await _context.GymCheckIns
-            .Include(g => g.Member).ThenInclude(m => m.User)
-            .Include(g => g.Subscription).ThenInclude(s => s!.Package)
-            .Include(g => g.CheckedByUser)
-            .Where(g => g.MemberId == member.Id)
-            .OrderByDescending(g => g.CheckInTime)
-            .ToListAsync();
-
-        return checkIns.Select(g => MapToResponse(g, g.Member, g.Subscription?.Package.PackageName ?? "Gói tập", g.CheckedByUser?.FullName));
+        return await GetCheckInHistoryAsync(new GymCheckInFilterRequest
+        {
+            MemberId = member.Id,
+            FromDate = fromDate,
+            ToDate = toDate
+        });
     }
 
     private static GymCheckInResponse MapToResponse(GymCheckIn g, Member member, string packageName, string? staffName)
     {
+        var now = DateTime.UtcNow;
+        int? durationMinutes = null;
+        string status;
+
+        if (g.CheckOutTime.HasValue)
+        {
+            status = "CheckedOut";
+            durationMinutes = Math.Max(1, (int)Math.Round((g.CheckOutTime.Value - g.CheckInTime).TotalMinutes));
+        }
+        else if (g.CheckInTime.Date == now.Date)
+        {
+            status = "InGym";
+            durationMinutes = Math.Max(1, (int)Math.Round((now - g.CheckInTime).TotalMinutes));
+        }
+        else
+        {
+            status = "ForgotCheckOut";
+        }
+
         return new GymCheckInResponse
         {
             Id = g.Id,
@@ -201,6 +310,8 @@ public class GymCheckInService : IGymCheckInService
             PackageName = packageName,
             CheckInTime = g.CheckInTime,
             CheckOutTime = g.CheckOutTime,
+            DurationMinutes = durationMinutes,
+            Status = status,
             CheckedByStaffName = staffName,
             Notes = g.Notes
         };
