@@ -24,6 +24,79 @@ namespace SportsCenterAPI.Migrations
 
             modelBuilder.HasSequence("PayOSOrderNumbers");
 
+            modelBuilder.Entity("SportsCenterAPI.Models.AIChatHistory", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Answer")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Question")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "Id");
+
+                    b.ToTable("AIChatHistories");
+                });
+
+            modelBuilder.Entity("SportsCenterAPI.Models.AIWorkoutHistory", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DaysPerWeek")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Goal")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Level")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int>("MemberId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("PlanJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MemberId");
+
+                    b.HasIndex("UserId", "Id");
+
+                    b.ToTable("AIWorkoutHistories");
+                });
+
             modelBuilder.Entity("SportsCenterAPI.Models.Attendance", b =>
                 {
                     b.Property<int>("Id")
@@ -477,6 +550,11 @@ namespace SportsCenterAPI.Migrations
                     b.Property<string>("PackageName")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<string>("PackageType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<decimal>("Price")
                         .HasPrecision(18, 2)
@@ -937,6 +1015,36 @@ namespace SportsCenterAPI.Migrations
                             PhoneNumber = "0901234567",
                             Role = "Manager"
                         });
+                });
+
+            modelBuilder.Entity("SportsCenterAPI.Models.AIChatHistory", b =>
+                {
+                    b.HasOne("SportsCenterAPI.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SportsCenterAPI.Models.AIWorkoutHistory", b =>
+                {
+                    b.HasOne("SportsCenterAPI.Models.Member", "Member")
+                        .WithMany()
+                        .HasForeignKey("MemberId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SportsCenterAPI.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Member");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("SportsCenterAPI.Models.Attendance", b =>

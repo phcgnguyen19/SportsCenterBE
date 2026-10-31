@@ -19,9 +19,61 @@ public class WorkoutAiRequest
     public int DaysPerWeek { get; set; } = 3;
 }
 
+public class WorkoutPlanResponse
+{
+    public string Goal { get; set; } = "";
+    public string Level { get; set; } = "";
+    public int DaysPerWeek { get; set; }
+    public List<WorkoutSession> Sessions { get; set; } = [];
+    public List<string> Warnings { get; set; } = [];
+}
+
+public class WorkoutSession
+{
+    public int Day { get; set; }
+    public string Title { get; set; } = "";
+    public int? DurationMinutes { get; set; }
+    public List<WorkoutExercise> Exercises { get; set; } = [];
+}
+
+public class WorkoutExercise
+{
+    public string ExerciseName { get; set; } = "";
+    public int? Sets { get; set; }
+    public int? Reps { get; set; }
+    public int? RestSeconds { get; set; }
+    public string? Note { get; set; }
+}
+
 public class ChatAiRequest
 {
     [Required(ErrorMessage = "Vui lòng nhập câu hỏi.")]
     [StringLength(1000, MinimumLength = 1, ErrorMessage = "Câu hỏi tối đa 1000 ký tự.")]
     public string Question { get; set; } = string.Empty;
+}
+
+public class ChatHistoryItem
+{
+    public long Id { get; set; }
+    public string Question { get; set; } = string.Empty;
+    public string Answer { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+}
+
+public class WorkoutHistoryItem
+{
+    public long Id { get; set; }
+    public int MemberId { get; set; }
+    public string Goal { get; set; } = string.Empty;
+    public string Level { get; set; } = string.Empty;
+    public int DaysPerWeek { get; set; }
+    public DateTime CreatedAt { get; set; }
+}
+
+public class WorkoutHistoryDetail
+{
+    public long Id { get; set; }
+    public int MemberId { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public WorkoutPlanResponse Plan { get; set; } = new();
 }

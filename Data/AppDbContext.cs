@@ -32,6 +32,8 @@ namespace SportsCenterAPI.Data
         public DbSet<SupportTicket> SupportTickets { get; set; } = null!;
         public DbSet<GymCheckIn> GymCheckIns { get; set; } = null!;
         public DbSet<Room> Rooms { get; set; } = null!;
+        public DbSet<AIChatHistory> AIChatHistories { get; set; } = null!;
+        public DbSet<AIWorkoutHistory> AIWorkoutHistories { get; set; } = null!;
         #endregion
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -54,6 +56,8 @@ namespace SportsCenterAPI.Data
 
             #region 1. Unique Indexes
             modelBuilder.Entity<User>().HasIndex(u => u.Email).IsUnique();
+            modelBuilder.Entity<AIChatHistory>().HasIndex(chat => new { chat.UserId, chat.Id });
+            modelBuilder.Entity<AIWorkoutHistory>().HasIndex(history => new { history.UserId, history.Id });
             modelBuilder.Entity<Member>().HasIndex(m => m.UserId).IsUnique();
             modelBuilder.Entity<Coach>().HasIndex(c => c.UserId).IsUnique();
 

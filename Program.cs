@@ -12,7 +12,6 @@ using SportsCenterAPI.Settings;
 using System.Reflection.Metadata;
 using System.Security.Claims;
 using System.Text;
-using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -138,7 +137,9 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:3000") // Node.js frontend port
+        policy.WithOrigins(
+                  "http://localhost:3000", // Node.js frontend port
+                  "https://sportcenter-fe.onrender.com")
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
@@ -147,6 +148,9 @@ builder.Services.AddCors(options =>
 // Register Services (DI)
 
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.Configure<GoogleAuthConfig>(
+    builder.Configuration.GetSection("GoogleAuth"));
+builder.Services.AddHttpClient<IGoogleTokenVerifier, GoogleTokenVerifier>();
 builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<IMembershipPackageService, MembershipPackageService>();
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
@@ -154,22 +158,11 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<IClassService, ClassService>();
 builder.Services.Configure<MailSettings>(
 builder.Configuration.GetSection("MailSettings"));
-builder.Services.AddScoped<IEmailService, EmailService>();
-builder.Services.AddSingleton<IConnectionMultiplexer>(provider =>
+builder.Services.AddHttpClient<IEmailService, EmailService>(client =>
 {
-    var configuration = provider.GetRequiredService<IConfiguration>();
-    var connection = configuration.GetConnectionString("Redis")
-        ?? throw new InvalidOperationException("Chưa cấu hình ConnectionStrings:Redis.");
-    var options = ConfigurationOptions.Parse(connection);
-    options.AbortOnConnectFail = false;
-    options.ConnectTimeout = 3000;
-    options.ConnectRetry = 1;
-    options.AsyncTimeout = 5000;
-    options.SyncTimeout = 5000;
-    options.BacklogPolicy = BacklogPolicy.FailFast;
-    return ConnectionMultiplexer.Connect(options);
+    client.Timeout = TimeSpan.FromSeconds(30);
 });
-builder.Services.AddSingleton<RedisOtpStore>();
+builder.Services.AddSingleton<MemoryOtpStore>();
 builder.Services.AddHttpClient<IAIService, AIService>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(60);
@@ -245,5 +238,29 @@ if (builder.Configuration.GetValue("Database:InitializeOnStartup", true))
     await SportsCenterAPI.Data.DbSeeder.SeedAsync(db);
 }
 
+app.MapGet("/", () => Results.Redirect("/swagger"));
+
+// Đảm bảo bảng MembershipPackages trên Supabase có cột PackageType chuẩn
+try
+{
+    using var schemaScope = app.Services.CreateScope();
+    var schemaDb = schemaScope.ServiceProvider.GetRequiredService<SportsCenterAPI.Data.AppDbContext>();
+    if (schemaDb.Database.IsRelational())
+    {
+        await schemaDb.Database.ExecuteSqlRawAsync("""
+            ALTER TABLE "MembershipPackages" 
+            ADD COLUMN IF NOT EXISTS "PackageType" character varying(20) NOT NULL DEFAULT 'Standard';
+
+            UPDATE "MembershipPackages" 
+            SET "PackageType" = 'PT' 
+            WHERE "PackageType" = 'Standard' 
+              AND ("PackageName" ILIKE '%PT%' OR "PackageName" ILIKE '%1-1%' OR "Description" ILIKE '%huấn luyện viên%');
+            """);
+    }
+}
+catch
+{
+    // Bỏ qua nếu môi trường test không kết nối DB thật
+}
 
 app.Run();
