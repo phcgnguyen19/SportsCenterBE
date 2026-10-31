@@ -66,6 +66,7 @@ public class AttendanceServiceTests
             Status = "Present"
         };
 
+
         // Act (actorId = 1 là HLV phụ trách)
         var result = await service.MarkAttendanceAsync(1, request);
 
@@ -78,6 +79,7 @@ public class AttendanceServiceTests
         var savedAttendance = await db.Attendances.FirstOrDefaultAsync(a => a.MemberId == 1 && a.SessionId == 1);
         Assert.NotNull(savedAttendance);
         Assert.Equal("Present", savedAttendance.Status);
+
 
         // Kiểm tra tự động gửi Notification cho học viên
         var notification = await db.Notifications.FirstOrDefaultAsync(n => n.UserId == 2);
@@ -114,6 +116,7 @@ public class AttendanceServiceTests
 
         var request = new MarkAttendanceDTO { MemberId = 1, SessionId = 1, Status = "Present" };
 
+
         // Act & Assert (Không được điểm danh buổi học đã hủy)
         var ex = await Assert.ThrowsAsync<BusinessException>(() => service.MarkAttendanceAsync(1, request));
         Assert.Equal(409, ex.StatusCode);
@@ -149,6 +152,7 @@ public class AttendanceServiceTests
 
         var request = new MarkAttendanceDTO { MemberId = 999, SessionId = 1, Status = "Present" };
 
+
         // Act & Assert (Hội viên chưa đăng ký buổi học)
         var ex = await Assert.ThrowsAsync<BusinessException>(() => service.MarkAttendanceAsync(1, request));
         Assert.Equal(409, ex.StatusCode);
@@ -160,7 +164,7 @@ public class AttendanceServiceTests
     {
         // Arrange
         var (service, db) = CreateService();
-
+      
         // Coach 1 được phân công buổi học
         var coachUser1 = new User { Id = 1, FullName = "Coach John", Email = "coach1@test.com", Role = UserRoles.Coach, IsActive = true };
         var coach1 = new Coach { Id = 1, UserId = 1, User = coachUser1, Specialization = "Fitness" };
@@ -189,6 +193,7 @@ public class AttendanceServiceTests
         await db.SaveChangesAsync();
 
         var request = new MarkAttendanceDTO { MemberId = 1, SessionId = 1, Status = "Present" };
+
 
         // Act & Assert (ActorId = 2 là Coach 2 không có quyền)
         var ex = await Assert.ThrowsAsync<BusinessException>(() => service.MarkAttendanceAsync(2, request));
@@ -247,12 +252,14 @@ public class AttendanceServiceTests
         db.Attendances.AddRange(attendance1, attendance2);
         await db.SaveChangesAsync();
 
+
         // Act (actorId = 10 là UserId của member)
         var result = (await service.GetMyAttendancesAsync(10)).ToList();
 
         // Assert
         Assert.NotNull(result);
         Assert.Equal(2, result.Count);
+
         Assert.Equal("Late", result[0].Status); // sắp xếp theo thời gian mới nhất lên đầu
         Assert.Equal("Present", result[1].Status);
     }

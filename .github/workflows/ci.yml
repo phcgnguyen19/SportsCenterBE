@@ -1,8 +1,8 @@
-name: .NET CI
+﻿name: .NET CI
 
 on:
   push:
-    branches: [ master, unittest2710, 'nguyen*' ]
+    branches: [ master, 'unittest*', 'nguyen*', 'feat/**' ]
   pull_request:
     branches: [ master ]
 
@@ -25,5 +25,5 @@ jobs:
     - name: Build Solution
       run: dotnet build SportsCenterAPI.slnx --no-restore
 
-    - name: Chạy tự động 12 Unit Tests
+    - name: Chạy tự động toàn bộ Unit Tests
       run: dotnet test SportsCenterAPI.slnx --no-build --verbosity normal
