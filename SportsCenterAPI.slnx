@@ -1,7 +1,7 @@
-<Solution>
+﻿<Solution>
   <Folder Name="/.github/" />
   <Folder Name="/.github/workflows/">
-    <File Path="ci.yml" />
+    <File Path=".github/workflows/ci.yml" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/SportsCenterAPI.Tests/SportsCenterAPI.Tests.csproj" />
