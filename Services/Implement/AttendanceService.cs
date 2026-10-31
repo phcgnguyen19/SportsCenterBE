@@ -44,6 +44,20 @@ public class AttendanceService(AppDbContext context) : IAttendanceService
                 409, "Không được điểm danh buổi học đã hủy.");
         }
 
+        // Kiểm tra khung giờ: Chặn điểm danh khi chưa tới ngày/giờ học hoặc đã qua quá lâu
+        var now = DateTime.UtcNow;
+        if (now < session.StartsAt.AddHours(-2))
+        {
+            throw new BusinessException(
+                409, "Chưa đến thời gian điểm danh buổi học này.");
+        }
+
+        if (now > session.EndsAt.AddHours(12))
+        {
+            throw new BusinessException(
+                409, "Đã quá thời hạn điểm danh cho buổi học này.");
+        }
+
         var registration = await context.ClassRegistrations
             .Include(r => r.Member)
                 .ThenInclude(m => m.User)
