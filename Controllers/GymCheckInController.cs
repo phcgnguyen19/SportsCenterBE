@@ -75,9 +75,9 @@ public class GymCheckInsController : ControllerBase
         return Ok(result);
     }
 
-    // 5. Xem danh sách khách đã vào trong ngày
+    // 5. Xem danh sách khách đã vào trong ngày (Giữ nguyên tương thích FE)
     /// <summary>
-    /// Xem danh sách hội viên check-in trong ngày
+    /// Xem danh sách hội viên check-in trong ngày hôm nay
     /// </summary>
     [HttpGet("today")]
     [Authorize(Roles = "Receptionist,Manager")]
@@ -87,18 +87,45 @@ public class GymCheckInsController : ControllerBase
         return Ok(result);
     }
 
-    // 6. Hội viên xem lịch sử điểm danh của mình
+    // 6. Chế độ 1 (Timeline Log): Xem lịch sử check-in/check-out trong quá khứ & hiện tại
+    /// <summary>
+    /// Tra cứu lịch sử check-in/check-out theo khoảng ngày, hội viên, từ khóa và trạng thái
+    /// </summary>
+    [HttpGet("history")]
+    [Authorize(Roles = "Receptionist,Manager")]
+    public async Task<IActionResult> GetHistory([FromQuery] GymCheckInFilterRequest filter)
+    {
+        var result = await _checkInService.GetCheckInHistoryAsync(filter);
+        return Ok(result);
+    }
+
+    // 7. Chế độ 2 (Member View): Thống kê tần suất check-in gom theo từng thành viên
+    /// <summary>
+    /// Xem tổng hợp lịch sử check-in gom nhóm theo từng hội viên
+    /// </summary>
+    [HttpGet("summary-by-member")]
+    [Authorize(Roles = "Receptionist,Manager")]
+    public async Task<IActionResult> GetSummaryByMember(
+        [FromQuery] DateTime? fromDate,
+        [FromQuery] DateTime? toDate,
+        [FromQuery] string? search)
+    {
+        var result = await _checkInService.GetCheckInSummaryByMemberAsync(fromDate, toDate, search);
+        return Ok(result);
+    }
+
+    // 8. Hội viên tự xem lịch sử điểm danh của mình (có lọc theo ngày)
     /// <summary>
     /// Xem lịch sử ra vào trung tâm của tôi
     /// </summary>
     [HttpGet("my-history")]
     [Authorize(Roles = "Member")]
-    public async Task<IActionResult> GetMyHistory()
+    public async Task<IActionResult> GetMyHistory([FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate)
     {
         var userIdStr = User.FindFirst("UserId")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userIdStr)) return Unauthorized();
 
-        var result = await _checkInService.GetMyHistoryAsync(int.Parse(userIdStr));
+        var result = await _checkInService.GetMyHistoryAsync(int.Parse(userIdStr), fromDate, toDate);
         return Ok(result);
     }
 }

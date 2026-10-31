@@ -39,6 +39,31 @@ public class GymCheckInResponse
     public string PackageName { get; set; } = string.Empty;
     public DateTime CheckInTime { get; set; }
     public DateTime? CheckOutTime { get; set; }
+    public int? DurationMinutes { get; set; }
+    /// InGym (Đang tập hôm nay), CheckedOut (Đã ra về), ForgotCheckOut (Qua ngày chưa check-out)
+    public string Status { get; set; } = string.Empty;
     public string? CheckedByStaffName { get; set; }
     public string? Notes { get; set; }
+}
+
+public class GymCheckInFilterRequest
+{
+    public DateTime? FromDate { get; set; }
+    public DateTime? ToDate { get; set; }
+    public int? MemberId { get; set; }
+    public string? Search { get; set; } // Tìm theo Tên, SĐT hoặc Mã SC-MEM-...
+    public string? Status { get; set; } // All, InGym, CheckedOut, ForgotCheckOut
+}
+
+public class MemberCheckInSummaryDTO
+{
+    public int MemberId { get; set; }
+    public string MemberCode { get; set; } = string.Empty;
+    public string MemberName { get; set; } = string.Empty;
+    public string PhoneNumber { get; set; } = string.Empty;
+    public string CurrentPackageName { get; set; } = string.Empty;
+    public int TotalCheckIns { get; set; }
+    public int TotalDurationMinutes { get; set; }
+    public DateTime LastCheckInTime { get; set; }
+    public bool IsCurrentlyInGym { get; set; }
 }

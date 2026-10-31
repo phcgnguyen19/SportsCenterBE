@@ -46,10 +46,10 @@ public class AttendanceService(AppDbContext context) : IAttendanceService
 
         // Kiểm tra khung giờ: Chặn điểm danh khi chưa tới ngày/giờ học hoặc đã qua quá lâu
         var now = DateTime.UtcNow;
-        if (now < session.StartsAt.AddHours(-2))
+        if (now < session.StartsAt.AddMinutes(-30))
         {
             throw new BusinessException(
-                409, "Chưa đến thời gian điểm danh buổi học này.");
+                409, "Chưa đến thời gian điểm danh buổi học này (chỉ mở trước giờ bắt đầu 30 phút).");
         }
 
         if (now > session.EndsAt.AddHours(12))

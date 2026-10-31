@@ -36,7 +36,7 @@ public class AttendanceServiceTests
             CoachId = 1,
             Coach = coach,
             Status = "Scheduled",
-            StartsAt = DateTime.UtcNow.AddHours(1),
+            StartsAt = DateTime.UtcNow.AddMinutes(15),
             EndsAt = DateTime.UtcNow.AddHours(2)
         };
 
@@ -140,8 +140,8 @@ public class AttendanceServiceTests
             CoachId = 1,
             Coach = coach,
             Status = "Scheduled",
-            StartsAt = DateTime.UtcNow.AddHours(1),
-            EndsAt = DateTime.UtcNow.AddHours(2)
+            StartsAt = DateTime.UtcNow.AddMinutes(15),
+            EndsAt = DateTime.UtcNow.AddMinutes(75)
         };
 
         db.Users.Add(coachUser);
