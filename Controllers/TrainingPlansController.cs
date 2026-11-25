@@ -114,6 +114,17 @@ public class TrainingPlansController(ITrainingPlanService trainingService) : Bas
     }
 
     /// <summary>
+    /// Hội viên đánh dấu đã tập giáo án của mình
+    /// </summary>
+    [HttpPost("{id:int}/complete")]
+    [Authorize(Roles = UserRoles.Member)]
+    public async Task<IActionResult> CompleteMemberPlan(int id)
+    {
+        try { return Ok(new { success = true, data = await trainingService.CompleteMemberPlanAsync(ActorId(), id) }); }
+        catch (BusinessException ex) { return StatusCode(ex.StatusCode, new { success = false, message = ex.Message }); }
+    }
+
+    /// <summary>
     /// Huấn luyện viên cập nhật trạng thái kế hoạch tập luyện
     /// </summary>
     [HttpPut("{id:int}/status")]

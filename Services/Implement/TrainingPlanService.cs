@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SportsCenterAPI.Data;
+using System.Data;
 using SportsCenterAPI.DTOs.Training;
 using SportsCenterAPI.Helpers;
 using SportsCenterAPI.Models;
@@ -315,14 +316,38 @@ public class TrainingPlanService(AppDbContext context) : ITrainingPlanService
         return true;
     }
 
+    public async Task<TrainingPlanResponseDTO> CompleteMemberPlanAsync(int memberUserId, int planId)
+    {
+        await using var transaction = await context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+        var member = await context.Members.Include(m => m.User)
+            .SingleOrDefaultAsync(m => m.UserId == memberUserId && m.User.IsActive && m.User.Role == "Member")
+            ?? throw new BusinessException(403, "Chỉ hội viên đang hoạt động được đánh dấu giáo án đã tập.");
+        var plan = await context.TrainingPlans.Include(p => p.Coach)
+            .SingleOrDefaultAsync(p => p.Id == planId && p.MemberId == member.Id)
+            ?? throw new BusinessException(404, "Không tìm thấy giáo án trong lộ trình của bạn.");
+        if (plan.Status == "Completed") return await GetPlanByIdAsync(planId);
+        if (plan.Status != "Active") throw new BusinessException(409, "Chỉ đánh dấu đã tập cho giáo án đang áp dụng.");
+        if (plan.StartDate > DateTime.UtcNow) throw new BusinessException(409, "Giáo án chưa đến ngày bắt đầu.");
+        plan.Status = "Completed";
+        if (plan.Coach != null) context.Notifications.Add(new Notification {
+            UserId = plan.Coach.UserId,
+            Title = "Hội viên đã hoàn thành giáo án",
+            Content = $"Hội viên {member.User.FullName} đã tự đánh dấu hoàn thành giáo án \"{plan.PlanName}\" (#{plan.Id}).",
+            SentAt = DateTime.UtcNow
+        });
+        await context.SaveChangesAsync();
+        await transaction.CommitAsync();
+        return await GetPlanByIdAsync(planId);
+    }
+
     public async Task<bool> RequestPlanChangeAsync(int memberUserId, int planId, RequestPlanChangeDTO request)
     {
-        if (request is null || string.IsNullOrWhiteSpace(request.Reason))
+        if (request is null || string.IsNullOrWhiteSpace(request.Reason) || request.Reason.Trim().Length > 1000)
             throw new ArgumentException("Vui lòng nhập nội dung bạn muốn thay đổi.");
 
         var member = await context.Members
             .Include(m => m.User)
-            .FirstOrDefaultAsync(m => m.UserId == memberUserId)
+            .FirstOrDefaultAsync(m => m.UserId == memberUserId && m.User.IsActive && m.User.Role == "Member")
             ?? throw new UnauthorizedAccessException("Không tìm thấy hồ sơ hội viên.");
 
         var plan = await context.TrainingPlans

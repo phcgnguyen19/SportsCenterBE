@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SportsCenterAPI.DTOs.Training;
+using SportsCenterAPI.Helpers;
 using SportsCenterAPI.Models;
 using SportsCenterAPI.Services.Implement;
 
@@ -7,6 +8,51 @@ namespace SportsCenterAPI.Tests;
 
 public class TrainingPlanServiceTests
 {
+    [Fact]
+    public async Task MemberCompletion_UpdatesOwnPlanAndNotifiesCoachOnlyOnce()
+    {
+        var (db, service, planId) = await SeedAsync();
+        var completed = await service.CompleteMemberPlanAsync(3, planId);
+        Assert.Equal("Completed", completed.Status);
+        Assert.Single(db.Notifications.Where(n => n.UserId == CoachUserId));
+        Assert.Equal("Completed", (await service.CompleteMemberPlanAsync(3, planId)).Status);
+        Assert.Single(db.Notifications.Where(n => n.UserId == CoachUserId));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.UpdatePlanStatusAsync(3, planId, "Active"));
+    }
+
+    [Fact]
+    public async Task MemberCompletion_RejectsOtherMembersAndInactiveAccounts()
+    {
+        var (db, service, planId) = await SeedAsync();
+        db.Users.Add(new User { Id = 4, Email = "other@test.com", FullName = "Other", Role = "Member" });
+        db.Members.Add(new Member { Id = 2, UserId = 4 });
+        await db.SaveChangesAsync();
+        var foreign = await Assert.ThrowsAsync<BusinessException>(() => service.CompleteMemberPlanAsync(4, planId));
+        Assert.Equal(404, foreign.StatusCode);
+        var member = await db.Users.FindAsync(3);
+        member!.IsActive = false;
+        await db.SaveChangesAsync();
+        var inactive = await Assert.ThrowsAsync<BusinessException>(() => service.CompleteMemberPlanAsync(3, planId));
+        Assert.Equal(403, inactive.StatusCode);
+        Assert.Equal("Active", (await db.TrainingPlans.FindAsync(planId))!.Status);
+        Assert.Empty(db.Notifications);
+    }
+
+    [Theory]
+    [InlineData("Cancelled", false)]
+    [InlineData("Active", true)]
+    public async Task MemberCompletion_RejectsUnavailableOrFuturePlan(string status, bool future)
+    {
+        var (db, service, planId) = await SeedAsync();
+        var plan = await db.TrainingPlans.FindAsync(planId);
+        plan!.Status = status;
+        if (future) plan.StartDate = DateTime.UtcNow.AddDays(1);
+        await db.SaveChangesAsync();
+        var error = await Assert.ThrowsAsync<BusinessException>(() => service.CompleteMemberPlanAsync(3, planId));
+        Assert.Equal(409, error.StatusCode);
+        Assert.Equal(status, plan.Status);
+        Assert.Empty(db.Notifications);
+    }
     private const int CoachUserId = 1, OtherCoachUserId = 2;
 
     private static async Task<(Data.AppDbContext db, TrainingPlanService service, int planId)> SeedAsync()
