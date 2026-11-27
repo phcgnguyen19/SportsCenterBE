@@ -14,6 +14,45 @@ public class ProfileServiceTests
     private readonly Mock<IEmailService> _mockEmail = new();
     private readonly IMemoryCache _cache = new MemoryCache(new MemoryCacheOptions());
 
+    [Theory]
+    [InlineData("Coach")]
+    [InlineData("Receptionist")]
+    public async Task StaffBirthday_PersistsWithoutMemberRecord_AndSurvivesReadback(string role)
+    {
+        using var db = TestDbHelper.CreateDbContext();
+        db.Users.Add(new User { Id = 15, FullName = "Staff", Email = "staff@example.com", Role = role, PasswordHash = "unused" });
+        await db.SaveChangesAsync();
+        var service = new ProfileService(db, _mockEmail.Object, _cache);
+        Assert.Null((await service.GetAsync(15)).DateOfBirth);
+        var birthday = new DateTime(2000, 2, 29, 0, 0, 0, DateTimeKind.Utc);
+        var saved = await service.UpdateAsync(15, new UpdateProfileDTO { DateOfBirth = birthday });
+        Assert.Equal(birthday, saved.DateOfBirth);
+        db.ChangeTracker.Clear();
+        Assert.Equal(birthday, (await service.GetAsync(15)).DateOfBirth);
+        Assert.Empty(db.Members);
+        await service.UpdateAsync(15, new UpdateProfileDTO { FullName = "Updated Staff" });
+        Assert.Equal(birthday, (await service.GetAsync(15)).DateOfBirth);
+    }
+
+    [Theory]
+    [InlineData("Coach")]
+    [InlineData("Receptionist")]
+    public async Task StaffBirthday_InvalidAge_IsRejectedBeforeChangingProfile(string role)
+    {
+        using var db = TestDbHelper.CreateDbContext();
+        db.Users.Add(new User { Id = 16, FullName = "Staff", Email = "staff@example.com", Role = role, PasswordHash = "unused" });
+        await db.SaveChangesAsync();
+        var service = new ProfileService(db, _mockEmail.Object, _cache);
+        foreach (var birthday in new[] { DateTime.UtcNow.Date.AddDays(1), DateTime.UtcNow.Date.AddYears(-15), new DateTime(1949, 12, 31) })
+        {
+            var error = await Assert.ThrowsAsync<BusinessException>(() => service.UpdateAsync(16,
+                new UpdateProfileDTO { DateOfBirth = birthday, FullName = "Must not save" }));
+            Assert.Equal(400, error.StatusCode);
+            Assert.Equal("Staff", (await service.GetAsync(16)).FullName);
+            Assert.Null((await service.GetAsync(16)).DateOfBirth);
+        }
+    }
+
     [Fact]
     public async Task UpdateAsync_ValidData_UpdatesMemberFieldsSuccessfully()
     {

@@ -8,6 +8,7 @@ public class StaffResponseDTO
     public string FullName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string? Phone { get; set; }
+    public DateTime? DateOfBirth { get; set; }
     public string Role { get; set; } = string.Empty;
     public bool IsActive { get; set; }
     public int? CoachId { get; set; }
@@ -20,6 +21,7 @@ public class StaffResponseDTO
         FullName = user.FullName,
         Email = user.Email,
         Phone = user.PhoneNumber,
+        DateOfBirth = user.DateOfBirth,
         Role = user.Role,
         IsActive = user.IsActive,
         CoachId = user.Coach?.Id,

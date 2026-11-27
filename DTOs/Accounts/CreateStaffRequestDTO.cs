@@ -16,6 +16,9 @@ public class CreateStaffRequestDTO
     [Phone]
     public string? Phone { get; set; }
 
+    [SportsCenterAPI.Helpers.BirthDate]
+    public DateTime? DateOfBirth { get; set; }
+
     [Required, RegularExpression("^(Manager|Receptionist|Coach)$",
         ErrorMessage = "Role must be Manager, Receptionist or Coach.")]
     public string Role { get; set; } = string.Empty;

@@ -8,6 +8,36 @@ namespace SportsCenterAPI.Tests;
 
 public class AccountServiceTests
 {
+    [Theory]
+    [InlineData("Coach")]
+    [InlineData("Receptionist")]
+    public async Task CreateStaff_BirthdayPersistsAndIsReturnedInStaffDetails(string role)
+    {
+        var (service, db) = CreateService();
+        db.Users.Add(new User { Id = 1, FullName = "Manager", Email = "manager@test.com", Role = "Manager" });
+        await db.SaveChangesAsync();
+        var birthday = new DateTime(2000, 2, 29, 0, 0, 0, DateTimeKind.Utc);
+        var created = await service.CreateStaffAsync(new CreateStaffRequestDTO {
+            FullName = "Staff", Email = "staff@test.com", Password = "Password@123", Role = role, DateOfBirth = birthday
+        }, 1);
+        Assert.Equal(birthday, created.DateOfBirth);
+        db.ChangeTracker.Clear();
+        Assert.Equal(birthday, (await service.GetStaffAsync(created.UserId)).DateOfBirth);
+        Assert.Equal(birthday, (await service.GetStaffAsync()).Single(staff => staff.UserId == created.UserId).DateOfBirth);
+    }
+
+    [Fact]
+    public async Task CreateStaff_InvalidBirthdayDoesNotCreateAnAccount()
+    {
+        var (service, db) = CreateService();
+        db.Users.Add(new User { Id = 1, FullName = "Manager", Email = "manager@test.com", Role = "Manager" });
+        await db.SaveChangesAsync();
+        var error = await Assert.ThrowsAsync<BusinessException>(() => service.CreateStaffAsync(new CreateStaffRequestDTO {
+            FullName = "Staff", Email = "staff@test.com", Password = "Password@123", Role = "Coach", DateOfBirth = DateTime.UtcNow
+        }, 1));
+        Assert.Equal(400, error.StatusCode);
+        Assert.Single(db.Users);
+    }
     private static (AccountService service, Data.AppDbContext db) CreateService()
     {
         var db = TestDbHelper.CreateDbContext();

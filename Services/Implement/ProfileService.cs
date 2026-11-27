@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using System.Security.Cryptography;
+using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using SportsCenterAPI.Data;
@@ -52,7 +53,7 @@ public class ProfileService : IProfileService
             Status: "Active",
             CreatedAt: user.CreatedAt,
             UpdatedAt: user.UpdatedAt,
-            DateOfBirth: member?.DateOfBirth,
+            DateOfBirth: member?.DateOfBirth ?? user.DateOfBirth,
             Gender: member?.Gender,
             Address: member?.Address,
             FitnessGoal: member?.FitnessGoal,
@@ -64,6 +65,14 @@ public class ProfileService : IProfileService
     {
         await using var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         var user = await FindUserAsync(userId);
+
+        if (dto.DateOfBirth.HasValue)
+        {
+            var result = new BirthDateAttribute().GetValidationResult(dto.DateOfBirth,
+                new ValidationContext(dto) { MemberName = nameof(dto.DateOfBirth) });
+            if (result != ValidationResult.Success)
+                throw new BusinessException(400, result!.ErrorMessage!);
+        }
 
         // Chỉ bắt mật khẩu hiện tại khi thực sự muốn đổi mật khẩu mới
         if (dto.Password != null)
@@ -120,6 +129,10 @@ public class ProfileService : IProfileService
             if (dto.Address != null) member.Address = dto.Address.Trim();
             if (dto.FitnessGoal != null) member.FitnessGoal = dto.FitnessGoal.Trim();
             if (dto.EmergencyContact != null) member.EmergencyContact = dto.EmergencyContact.Trim();
+        }
+        else if (dto.DateOfBirth.HasValue)
+        {
+            user.DateOfBirth = DateTime.SpecifyKind(dto.DateOfBirth.Value.Date, DateTimeKind.Utc);
         }
 
         user.UpdatedAt = DateTime.UtcNow;

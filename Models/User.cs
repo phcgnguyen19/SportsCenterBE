@@ -12,6 +12,7 @@ namespace SportsCenterAPI.Models
         public string PasswordHash { get; set; } = string.Empty;
         public string Role { get; set; } = "Member"; // Manager, Coach, Member
         public string? PhoneNumber { get; set; }
+        public DateTime? DateOfBirth { get; set; }
         public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }

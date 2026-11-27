@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 using SportsCenterAPI.Data;
 using SportsCenterAPI.DTOs.Accounts;
 using SportsCenterAPI.Helpers;
@@ -140,6 +141,13 @@ public class AccountService : IAccountService
 
         ValidateStaffRole(request.Role);
 
+        if (request.DateOfBirth.HasValue)
+        {
+            var result = new BirthDateAttribute().GetValidationResult(request.DateOfBirth,
+                new ValidationContext(request) { MemberName = nameof(request.DateOfBirth) });
+            if (result != ValidationResult.Success) throw new BusinessException(400, result!.ErrorMessage!);
+        }
+
         var email = request.Email.Trim().ToLowerInvariant();
 
         var emailExists = await _context.Users.AnyAsync(
@@ -158,6 +166,8 @@ public class AccountService : IAccountService
             Email = email,
             FullName = request.FullName.Trim(),
             PhoneNumber = request.Phone?.Trim(),
+            DateOfBirth = request.DateOfBirth.HasValue
+                ? DateTime.SpecifyKind(request.DateOfBirth.Value.Date, DateTimeKind.Utc) : null,
             PasswordHash = PasswordHelper.HashPassword(request.Password),
             Role = request.Role,
             IsActive = true,
